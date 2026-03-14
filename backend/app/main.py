@@ -44,7 +44,7 @@ def create_app() -> FastAPI:
 
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],  # Caddy handles HTTPS; allow all for Docker internal
+        allow_origin_regex=r"https?://.*",  # credentials=True requires explicit origins, regex matches all
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],

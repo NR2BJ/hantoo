@@ -1,4 +1,15 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "";
+function getApiBase(): string {
+  // Server-side: use Docker internal URL
+  if (typeof window === "undefined") {
+    return process.env.NEXT_PUBLIC_API_URL || "http://backend:8000";
+  }
+  // Client-side: use same hostname with backend port
+  // NEXT_PUBLIC_BACKEND_PORT can override the default 7655
+  const backendPort = process.env.NEXT_PUBLIC_BACKEND_PORT || "7655";
+  return `${window.location.protocol}//${window.location.hostname}:${backendPort}`;
+}
+
+const API_BASE = getApiBase();
 
 interface FetchOptions extends RequestInit {
   params?: Record<string, string>;
