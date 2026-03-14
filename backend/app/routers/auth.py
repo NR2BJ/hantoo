@@ -52,7 +52,7 @@ async def login(request: LoginRequest, response: Response, db: DB):
         key="access_token",
         value=token,
         httponly=True,
-        secure=True,
+        secure=False,  # TODO: set True when behind HTTPS reverse proxy
         samesite="lax",
         max_age=86400,
     )
