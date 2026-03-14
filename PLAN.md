@@ -11,7 +11,7 @@ LLM(Claude + OpenAI) 연동으로 AI 매매 분석 및 자동매매 지원.
 - **Backend**: Python FastAPI + SQLAlchemy (async) + Alembic
 - **DB**: PostgreSQL 16 + Redis 7
 - **LLM**: Claude API + OpenAI API (멀티 프로바이더)
-- **Reverse Proxy**: Caddy (자동 HTTPS)
+- **Reverse Proxy**: 외부 리버스 프록시 (Caddy, Nginx 등 - Docker 외부에서 운영)
 - **Deploy**: Docker Compose → Portainer (Git 스택)
 
 ## 설정 관리 (Zero-Config 배포)
@@ -27,9 +27,9 @@ LLM(Claude + OpenAI) 연동으로 AI 매매 분석 및 자동매매 지원.
 
 ```
 hantoo/
-├── docker-compose.yml          # Postgres, Redis, Backend, Frontend, Caddy (설정 파일 불필요)
+├── docker-compose.yml          # Postgres, Redis, Backend, Frontend (설정 파일 불필요)
 ├── PLAN.md                     # 이 파일
-├── caddy/Caddyfile             # 리버스 프록시 + 자동 HTTPS
+├── REVERSE-PROXY.md            # 리버스 프록시 설정 가이드 (Caddy, Nginx 등)
 ├── backend/
 │   ├── Dockerfile
 │   ├── app/
@@ -78,7 +78,7 @@ hantoo/
 | `ai_strategies` | AI 자동매매 전략 |
 
 ## 보안
-- Caddy 자동 HTTPS + 보안 헤더 (HSTS, X-Frame-Options 등)
+- 리버스 프록시 자동 HTTPS + 보안 헤더 (HSTS, X-Frame-Options 등)
 - JWT HttpOnly 쿠키 (XSS 방지)
 - TOTP 2FA (Google Authenticator)
 - 초대 코드 기반 가입 (공개 가입 차단)
@@ -142,3 +142,9 @@ hantoo/
 - nginx/ 디렉토리 제거 (caddy로 완전 대체)
 - Postgres/Redis 외부 포트 제거 (Docker 내부 네트워크만)
 - `app_settings` 테이블 추가
+
+### 2026-03-15 (2)
+- Caddy를 Docker Compose에서 제거 → 외부 리버스 프록시 사용
+  - 백엔드 8000, 프론트엔드 3000 포트 노출
+  - caddy/ 디렉토리 삭제, caddy 볼륨 제거
+- REVERSE-PROXY.md 추가: Caddy, Nginx 설정 예시 가이드

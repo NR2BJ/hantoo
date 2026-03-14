@@ -3,6 +3,8 @@
 # ============================================
 # 설정 파일 불필요 - 모든 앱 설정은 웹 UI에서 관리
 # Portainer: Git 리포지토리 → 스택으로 바로 배포
+# 리버스 프록시는 Docker 외부에서 설정 (REVERSE-PROXY.md 참고)
+# Backend: :7655, Frontend: :7656
 # ============================================
 
 services:
@@ -34,6 +36,8 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
+    ports:
+      - "7655:8000"
     environment:
       DATABASE_URL: postgresql+asyncpg://hantoo:hantoo-db-internal@postgres:5432/hantoo
       REDIS_URL: redis://redis:6379/0
@@ -47,31 +51,16 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+    ports:
+      - "7656:3000"
     environment:
       NEXT_PUBLIC_API_URL: http://backend:8000
       NEXT_PUBLIC_WS_URL: ws://backend:8000
     depends_on:
       - backend
 
-  caddy:
-    image: caddy:2-alpine
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
-      - hantoo_caddy_data:/data
-      - hantoo_caddy_config:/config
-    depends_on:
-      - frontend
-      - backend
-
 volumes:
   hantoo_pgdata:
     external: true
   hantoo_redisdata:
-    external: true
-  hantoo_caddy_data:
-    external: true
-  hantoo_caddy_config:
     external: true
