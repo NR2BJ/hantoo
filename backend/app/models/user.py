@@ -32,7 +32,10 @@ class User(Base):
 
     # Relationships
     kis_accounts = relationship("KISAccount", back_populates="owner")
-    account_access = relationship("KISAccountAccess", back_populates="user")
+    account_access = relationship(
+        "KISAccountAccess", back_populates="user",
+        foreign_keys="[KISAccountAccess.user_id]"
+    )
 
 
 class InviteCode(Base):
