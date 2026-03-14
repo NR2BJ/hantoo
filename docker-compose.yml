@@ -13,7 +13,7 @@ services:
       POSTGRES_USER: hantoo
       POSTGRES_PASSWORD: hantoo-db-internal
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - hantoo_pgdata:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U hantoo"]
       interval: 5s
@@ -23,7 +23,7 @@ services:
   redis:
     image: redis:7-alpine
     volumes:
-      - redisdata:/data
+      - hantoo_redisdata:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -60,14 +60,18 @@ services:
       - "443:443"
     volumes:
       - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy_data:/data
-      - caddy_config:/config
+      - hantoo_caddy_data:/data
+      - hantoo_caddy_config:/config
     depends_on:
       - frontend
       - backend
 
 volumes:
-  pgdata:
-  redisdata:
-  caddy_data:
-  caddy_config:
+  hantoo_pgdata:
+    external: true
+  hantoo_redisdata:
+    external: true
+  hantoo_caddy_data:
+    external: true
+  hantoo_caddy_config:
+    external: true
