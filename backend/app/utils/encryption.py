@@ -1,19 +1,18 @@
 from cryptography.fernet import Fernet
 
-from app.config import settings
+from app.services.settings_service import app_settings
 
 
 def get_fernet() -> Fernet:
-    if not settings.ENCRYPTION_KEY:
-        raise ValueError("ENCRYPTION_KEY is not set. Generate one with: Fernet.generate_key()")
-    return Fernet(settings.ENCRYPTION_KEY.encode())
+    key = app_settings.get("encryption_key")
+    if not key:
+        raise ValueError("Encryption key not initialized. Complete setup first.")
+    return Fernet(key.encode())
 
 
 def encrypt_value(value: str) -> bytes:
-    f = get_fernet()
-    return f.encrypt(value.encode())
+    return get_fernet().encrypt(value.encode())
 
 
 def decrypt_value(encrypted: bytes) -> str:
-    f = get_fernet()
-    return f.decrypt(encrypted).decode()
+    return get_fernet().decrypt(encrypted).decode()

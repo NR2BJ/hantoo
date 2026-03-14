@@ -5,6 +5,7 @@ from app.models.portfolio import PortfolioSnapshot
 from app.models.watchlist import Watchlist, WatchlistItem
 from app.models.alert import Alert
 from app.models.ai import AIConversation, AIMessage, AIStrategy
+from app.models.settings import AppSetting
 
 __all__ = [
     "User",
@@ -19,4 +20,5 @@ __all__ = [
     "AIConversation",
     "AIMessage",
     "AIStrategy",
+    "AppSetting",
 ]

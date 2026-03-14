@@ -1,9 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/stores/auth-store";
+import { api } from "@/lib/api-client";
 import Link from "next/link";
+
+interface SetupStatus {
+  setup_completed: boolean;
+  app_name: string;
+}
 
 export default function LoginPage() {
   const router = useRouter();
@@ -14,6 +20,17 @@ export default function LoginPage() {
   const [needs2FA, setNeeds2FA] = useState(false);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [appName, setAppName] = useState("Hantoo");
+
+  useEffect(() => {
+    api.get<SetupStatus>("/api/setup/status").then((status) => {
+      if (!status.setup_completed) {
+        router.push("/setup");
+        return;
+      }
+      setAppName(status.app_name);
+    }).catch(() => {});
+  }, [router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,7 +54,7 @@ export default function LoginPage() {
 
   return (
     <div>
-      <h1 className="text-3xl font-bold text-center mb-2">Hantoo</h1>
+      <h1 className="text-3xl font-bold text-center mb-2">{appName}</h1>
       <p className="text-center text-[var(--muted-foreground)] mb-8">
         KIS Trading Platform
       </p>
