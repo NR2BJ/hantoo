@@ -7,10 +7,10 @@ class Settings(BaseSettings):
     database and managed via the web UI setup wizard / admin settings page.
     """
 
-    DATABASE_URL: str = "postgresql+asyncpg://hantoo:password@postgres:5432/hantoo"
+    DATABASE_URL: str = "postgresql+asyncpg://hantoo:hantoo-db-internal@postgres:5432/hantoo"
     REDIS_URL: str = "redis://redis:6379/0"
 
-    model_config = {"env_file": ".env", "extra": "ignore"}
+    model_config = {"extra": "ignore"}
 
 
 settings = Settings()

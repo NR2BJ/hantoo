@@ -1,8 +1,12 @@
-# Development: localhost
-# Production: 도메인으로 변경 시 자동 HTTPS (Let's Encrypt)
-# 예: hantoo.yourdomain.com
+# ============================================
+# 도메인 설정
+# ============================================
+# localhost → 로컬 개발 (HTTP)
+# :80       → 외부 접속 허용 (HTTP only)
+# your.domain.com → 자동 HTTPS (Let's Encrypt)
+# ============================================
 
-{$DOMAIN:localhost} {
+:80 {
     # API routes
     handle /api/* {
         reverse_proxy backend:8000
@@ -24,12 +28,5 @@
         X-Frame-Options DENY
         X-XSS-Protection "1; mode=block"
         Referrer-Policy strict-origin-when-cross-origin
-        Strict-Transport-Security "max-age=31536000; includeSubDomains"
     }
-
-    # Rate limiting for auth endpoints
-    @auth_endpoints {
-        path /api/auth/*
-    }
-    # Note: Caddy rate limiting requires caddy-ext or use backend rate limiting
 }

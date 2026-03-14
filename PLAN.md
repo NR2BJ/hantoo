@@ -14,19 +14,20 @@ LLM(Claude + OpenAI) 연동으로 AI 매매 분석 및 자동매매 지원.
 - **Reverse Proxy**: Caddy (자동 HTTPS)
 - **Deploy**: Docker Compose → Portainer (Git 스택)
 
-## 설정 관리
-- `.env` 파일은 **인프라 설정만** 포함 (DB 비밀번호, 도메인)
-- JWT secret, 암호화 키 등 보안 키: **첫 실행 시 자동 생성** → DB 저장
+## 설정 관리 (Zero-Config 배포)
+- **설정 파일 불필요** - `.env` 없음
+- DB 비밀번호: docker-compose.yml에 하드코딩 (Docker 내부 네트워크, 외부 포트 없음)
+- JWT secret, 암호화 키: **첫 실행 시 자동 생성** → DB 저장
 - KIS API 키, LLM API 키, 관리자 계정: **웹 UI 셋업 위자드**에서 설정
 - 모든 앱 설정: **관리자 설정 페이지**에서 변경 가능
 - `app_settings` 테이블에 키-값으로 저장, 메모리 캐시
+- 도메인/HTTPS: Caddyfile에서 `:80` → `your.domain.com`으로 변경하면 자동 HTTPS
 
 ## 프로젝트 구조
 
 ```
 hantoo/
-├── docker-compose.yml          # Postgres, Redis, Backend, Frontend, Caddy
-├── .env.example                # 최소 설정 (DB_PASSWORD, DOMAIN만)
+├── docker-compose.yml          # Postgres, Redis, Backend, Frontend, Caddy (설정 파일 불필요)
 ├── PLAN.md                     # 이 파일
 ├── caddy/Caddyfile             # 리버스 프록시 + 자동 HTTPS
 ├── backend/
@@ -134,9 +135,10 @@ hantoo/
 ### 2026-03-15
 - Phase 1 완성
 - Nginx → Caddy 변경 (자동 HTTPS, 외부망 대비)
-- .env 기반 설정 → DB 기반 설정 + 웹 UI 관리로 전환
-  - .env에는 DB_PASSWORD, DOMAIN만 남김
+- Zero-Config 배포: .env 파일 완전 제거
+  - DB 비밀번호: docker-compose.yml 하드코딩 (내부 네트워크 전용)
   - JWT secret, encryption key: 첫 실행 시 자동 생성
-  - 모든 앱 설정: 관리자 설정 페이지에서 변경
-- 셋업 위자드 추가 (첫 실행 시 관리자 계정 생성)
+  - 모든 앱 설정: 웹 UI로 관리 (셋업 위자드 + 관리자 설정 페이지)
+- nginx/ 디렉토리 제거 (caddy로 완전 대체)
+- Postgres/Redis 외부 포트 제거 (Docker 내부 네트워크만)
 - `app_settings` 테이블 추가
