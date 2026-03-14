@@ -31,10 +31,10 @@ class User(Base):
     )
 
     # Relationships
-    kis_accounts = relationship("KISAccount", back_populates="owner")
+    kis_accounts = relationship("KISAccount", back_populates="owner", foreign_keys="[KISAccount.owner_id]")
     account_access = relationship(
         "KISAccountAccess", back_populates="user",
-        foreign_keys="[KISAccountAccess.user_id]"
+        primaryjoin="User.id == foreign(KISAccountAccess.user_id)"
     )
 
 
