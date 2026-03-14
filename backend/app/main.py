@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 
 from app.database import Base, async_session, engine
+from app.services.redis_client import close_redis, init_redis
 from app.services.settings_service import app_settings
 
 logger = logging.getLogger(__name__)
@@ -28,8 +29,10 @@ async def init_settings():
 async def lifespan(app: FastAPI):
     logger.info("Starting Hantoo Trading Platform")
     await init_db()
+    await init_redis()
     await init_settings()
     yield
+    await close_redis()
     await engine.dispose()
     logger.info("Hantoo shutdown complete")
 
@@ -50,11 +53,13 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
-    from app.routers import accounts, auth, setup
+    from app.routers import accounts, auth, market, setup, watchlists
 
     app.include_router(setup.router, prefix="/api", tags=["Setup"])
     app.include_router(auth.router, prefix="/api/auth", tags=["Auth"])
     app.include_router(accounts.router, prefix="/api/accounts", tags=["Accounts"])
+    app.include_router(market.router, prefix="/api/market", tags=["Market"])
+    app.include_router(watchlists.router, prefix="/api/watchlists", tags=["Watchlists"])
 
     @app.get("/api/health")
     async def health():

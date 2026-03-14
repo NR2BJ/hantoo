@@ -96,7 +96,7 @@ hantoo/
 - 웹 UI 설정 관리 (셋업 위자드 + 관리자 설정 페이지)
 - Next.js 스켈레톤 + 21개 라우트
 
-### Phase 2: Market Data & Charts
+### Phase 2: Market Data & Charts ✅
 - KIS 시세 서비스 (REST 조회, Redis 캐시)
 - Rate limiter (계좌별 초당 20건)
 - TradingView 차트 (캔들, 거래량, 기술적 지표)
@@ -148,3 +148,11 @@ hantoo/
   - 백엔드 8000, 프론트엔드 3000 포트 노출
   - caddy/ 디렉토리 삭제, caddy 볼륨 제거
 - REVERSE-PROXY.md 추가: Caddy, Nginx 설정 예시 가이드
+
+### 2026-03-15 (3)
+- Phase 2 구현 완료
+  - 백엔드: Redis 클라이언트, KIS 토큰 서비스, Rate Limiter (20 req/s), KIS API 클라이언트, 캐시 헬퍼, QuoteService (현재가/일봉/분봉/호가/체결/지수/검색)
+  - 백엔드: ActiveAccount 의존성, /api/market/* 라우터, /api/watchlists/* CRUD 라우터
+  - 프론트엔드: React Query 훅 (useQuote, useCandles, useOrderbook, useTrades, useIndices, useSearch, useWatchlist*)
+  - 프론트엔드: TradingView Lightweight Charts (캔들스틱 + 볼륨, 빨간=상승/파란=하락)
+  - 프론트엔드: 시장 정보 (지수 + 종목 검색), 종목 상세 (차트 + 호가 + 체결), 관심종목 (CRUD + 실시간 시세), 대시보드 지수 연동
