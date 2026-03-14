@@ -61,8 +61,4 @@ class KISAccountAccess(Base):
 
     # Relationships
     account = relationship("KISAccount", back_populates="access_grants")
-    user = relationship(
-        "User", back_populates="account_access",
-        primaryjoin="KISAccountAccess.user_id == foreign(User.id)",
-        foreign_keys=[user_id]
-    )
+    user = relationship("User", back_populates="account_access", foreign_keys=[user_id])
