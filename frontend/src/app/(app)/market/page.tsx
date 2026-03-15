@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { useIndices, useSearch } from "@/hooks/use-market";
+import { api } from "@/lib/api-client";
 import {
   useVolumeRank,
   useFluctuation,
@@ -29,15 +31,39 @@ const rankTabs: { key: RankTab; label: string }[] = [
 
 export default function MarketPage() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [query, setQuery] = useState("");
   const [market, setMarket] = useState<"J" | "Q">("J");
   const [rankTab, setRankTab] = useState<RankTab>("volume");
+  const [refreshing, setRefreshing] = useState(false);
   const { data: indices } = useIndices();
   const { data: results, isLoading: searching } = useSearch(query);
 
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await api.post("/api/cache/flush", undefined, { params: { scope: "ranking" } });
+      await queryClient.invalidateQueries({ predicate: (q) => {
+        const key = q.queryKey;
+        return key[0] === "ranking" || key[0] === "corporate" || key[0] === "indices";
+      }});
+    } finally {
+      setRefreshing(false);
+    }
+  }, [queryClient]);
+
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold">시장 정보</h2>
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold">시장 정보</h2>
+        <button
+          onClick={handleRefresh}
+          disabled={refreshing}
+          className="px-3 py-1 text-xs rounded border border-[var(--border)] hover:bg-[var(--secondary)] disabled:opacity-50 transition-colors"
+        >
+          {refreshing ? "갱신 중..." : "새로고침"}
+        </button>
+      </div>
 
       {/* Market Indices */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

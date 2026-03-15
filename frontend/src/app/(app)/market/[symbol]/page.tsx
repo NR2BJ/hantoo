@@ -1,6 +1,7 @@
 "use client";
 
-import { use, useState } from "react";
+import { use, useState, useCallback } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useQuote, useOrderbook, useTrades } from "@/hooks/use-market";
 import {
   useIncomeStatement,
@@ -14,6 +15,7 @@ import {
 } from "@/hooks/use-analysis";
 import { useInvestor } from "@/hooks/use-ranking";
 import { getPriceColor, getPriceSign } from "@/types/market";
+import { api } from "@/lib/api-client";
 import StockChart from "@/components/charts/stock-chart";
 
 type Tab = "chart" | "finance" | "dividend" | "news" | "opinion" | "investor" | "info";
@@ -35,7 +37,22 @@ export default function StockDetailPage({
 }) {
   const { symbol } = use(params);
   const [activeTab, setActiveTab] = useState<Tab>("chart");
+  const [refreshing, setRefreshing] = useState(false);
   const { data: quote } = useQuote(symbol);
+  const queryClient = useQueryClient();
+
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await api.post("/api/cache/flush", undefined, { params: { symbol } });
+      await queryClient.invalidateQueries({ predicate: (q) => {
+        const key = q.queryKey;
+        return key.some((k) => k === symbol);
+      }});
+    } finally {
+      setRefreshing(false);
+    }
+  }, [symbol, queryClient]);
 
   return (
     <div className="space-y-4">
@@ -43,6 +60,13 @@ export default function StockDetailPage({
       <div className="flex items-baseline gap-3">
         <h2 className="text-2xl font-bold">{quote?.name ?? symbol}</h2>
         <span className="text-[var(--muted-foreground)]">{symbol}</span>
+        <button
+          onClick={handleRefresh}
+          disabled={refreshing}
+          className="ml-auto px-3 py-1 text-xs rounded border border-[var(--border)] hover:bg-[var(--secondary)] disabled:opacity-50 transition-colors"
+        >
+          {refreshing ? "갱신 중..." : "새로고침"}
+        </button>
       </div>
 
       {/* Price */}
