@@ -248,7 +248,7 @@ class PortfolioService:
             logger.warning("Overseas balance query failed: %s", e)
             return [], 0
 
-        # output2: per-currency summary
+        # output2: per-currency summary — only include currencies with actual balances
         foreign_balances = []
         output2 = data.get("output2", [])
         if isinstance(output2, list):
@@ -256,11 +256,17 @@ class PortfolioService:
                 crcy = item.get("crcy_cd", "").strip()
                 if not crcy:
                     continue
+                deposit = _safe_float(item.get("frcr_dncl_amt_2", item.get("frcr_dncl_amt")))
+                stock_val = _safe_float(item.get("frcr_evlu_amt2"))
+                total_val = deposit + stock_val
+                # Skip currencies with zero balance
+                if total_val <= 0:
+                    continue
                 foreign_balances.append(ForeignCurrencyBalance(
                     currency=crcy,
-                    deposit=_safe_float(item.get("frcr_dncl_amt_2", item.get("frcr_dncl_amt"))),
-                    stock_value=_safe_float(item.get("frcr_evlu_amt2")),
-                    total_value=_safe_float(item.get("frcr_dncl_amt_2", 0)) + _safe_float(item.get("frcr_evlu_amt2", 0)),
+                    deposit=deposit,
+                    stock_value=stock_val,
+                    total_value=total_val,
                     exchange_rate=0.0,  # filled from output1 if available
                 ))
 
@@ -273,11 +279,13 @@ class PortfolioService:
                     if fb.currency == crcy and fb.exchange_rate == 0.0:
                         fb.exchange_rate = exrt
 
-        # output3: grand total (KRW converted)
-        output3 = data.get("output3", {})
-        if isinstance(output3, list) and output3:
-            output3 = output3[0]
-        overseas_total_krw = _safe_int(output3.get("tot_asst_amt")) if isinstance(output3, dict) else 0
+        # output3: grand total (KRW converted) — only trust if we have actual foreign balances
+        overseas_total_krw = 0
+        if foreign_balances:
+            output3 = data.get("output3", {})
+            if isinstance(output3, list) and output3:
+                output3 = output3[0]
+            overseas_total_krw = _safe_int(output3.get("tot_asst_amt")) if isinstance(output3, dict) else 0
 
         result = {
             "foreign_balances": [fb.model_dump() for fb in foreign_balances],

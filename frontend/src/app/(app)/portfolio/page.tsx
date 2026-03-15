@@ -132,61 +132,71 @@ export default function PortfolioPage() {
       )}
 
       {/* Asset Allocation Bar */}
-      {balance && balance.total_value > 0 && (
+      {balance && balance.total_value > 0 && (() => {
+        // Calculate proper percentages that sum to 100%
+        const domesticStock = balance.stock_value;
+        const overseasKrw = balance.overseas_total_krw;
+        // Cash = total minus stocks (avoid double-counting)
+        const cashPart = Math.max(0, balance.total_value - domesticStock - overseasKrw);
+        const total = balance.total_value;
+        const pctDomestic = total > 0 ? Math.min(100, (domesticStock / total) * 100) : 0;
+        const pctOverseas = total > 0 ? Math.min(100 - pctDomestic, (overseasKrw / total) * 100) : 0;
+        const pctCash = Math.max(0, 100 - pctDomestic - pctOverseas);
+
+        return (
         <div className="bg-[var(--card)] rounded-lg border border-[var(--border)] p-4">
           <h3 className="text-sm font-medium text-[var(--muted-foreground)] mb-3">
             자산 배분
           </h3>
           <div className="flex h-6 rounded-full overflow-hidden bg-[var(--secondary)]">
-            {balance.stock_value > 0 && (
+            {pctDomestic > 0.5 && (
               <div
                 className="bg-[var(--primary)] flex items-center justify-center text-xs text-white font-medium"
-                style={{
-                  width: `${((balance.stock_value / balance.total_value) * 100).toFixed(1)}%`,
-                }}
+                style={{ width: `${pctDomestic.toFixed(1)}%` }}
               >
-                {((balance.stock_value / balance.total_value) * 100).toFixed(1)}%
+                {pctDomestic >= 8 ? `${pctDomestic.toFixed(1)}%` : ""}
               </div>
             )}
-            {balance.overseas_total_krw > 0 && (
+            {pctOverseas > 0.5 && (
               <div
                 className="bg-amber-500 flex items-center justify-center text-xs text-white font-medium"
-                style={{
-                  width: `${((balance.overseas_total_krw / balance.total_value) * 100).toFixed(1)}%`,
-                }}
+                style={{ width: `${pctOverseas.toFixed(1)}%` }}
               >
-                {((balance.overseas_total_krw / balance.total_value) * 100).toFixed(1)}%
+                {pctOverseas >= 8 ? `${pctOverseas.toFixed(1)}%` : ""}
               </div>
             )}
-            {balance.cash > 0 && (
+            {pctCash > 0.5 && (
               <div
                 className="bg-emerald-500 flex items-center justify-center text-xs text-white font-medium"
-                style={{
-                  width: `${((balance.cash / balance.total_value) * 100).toFixed(1)}%`,
-                }}
+                style={{ width: `${pctCash.toFixed(1)}%` }}
               >
-                {((balance.cash / balance.total_value) * 100).toFixed(1)}%
+                {pctCash >= 8 ? `${pctCash.toFixed(1)}%` : ""}
               </div>
             )}
           </div>
           <div className="flex gap-4 mt-2 text-xs text-[var(--muted-foreground)]">
-            <span className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-[var(--primary)]" />
-              국내주식
-            </span>
-            {balance.overseas_total_krw > 0 && (
+            {pctDomestic > 0.5 && (
               <span className="flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-amber-500" />
-                해외주식
+                <span className="w-2 h-2 rounded-full bg-[var(--primary)]" />
+                국내주식 {pctDomestic.toFixed(1)}%
               </span>
             )}
-            <span className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-emerald-500" />
-              현금
-            </span>
+            {pctOverseas > 0.5 && (
+              <span className="flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-amber-500" />
+                해외주식 {pctOverseas.toFixed(1)}%
+              </span>
+            )}
+            {pctCash > 0.5 && (
+              <span className="flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                현금 {pctCash.toFixed(1)}%
+              </span>
+            )}
           </div>
         </div>
-      )}
+        );
+      })()}
 
       {/* Domestic Holdings Table */}
       <div className="bg-[var(--card)] rounded-lg border border-[var(--border)]">
