@@ -58,7 +58,7 @@ export default function StockDetailPage({
     <div className="space-y-4">
       {/* Header */}
       <div className="flex items-baseline gap-3">
-        <h2 className="text-2xl font-bold">{quote?.name ?? symbol}</h2>
+        <h2 className="text-2xl font-bold">{quote?.name || symbol}</h2>
         <span className="text-[var(--muted-foreground)]">{symbol}</span>
         <button
           onClick={handleRefresh}
@@ -160,7 +160,7 @@ function ChartTab({ symbol }: { symbol: string }) {
               </div>
             </div>
           ) : (
-            <p className="text-[var(--muted-foreground)] text-sm">KIS 계좌를 선택하세요</p>
+            <p className="text-[var(--muted-foreground)] text-sm">로딩 중...</p>
           )}
         </div>
 
@@ -188,7 +188,7 @@ function ChartTab({ symbol }: { symbol: string }) {
               })}
             </div>
           ) : (
-            <p className="text-[var(--muted-foreground)] text-sm">KIS 계좌를 선택하세요</p>
+            <p className="text-[var(--muted-foreground)] text-sm">체결 데이터 없음 (장 마감 시 비어있을 수 있음)</p>
           )}
         </div>
       </div>

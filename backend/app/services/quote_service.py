@@ -26,7 +26,7 @@ INDEX_NAMES = {
 
 def _safe_int(val, default=0) -> int:
     try:
-        return int(val)
+        return int(float(val))
     except (ValueError, TypeError):
         return default
 

@@ -33,7 +33,7 @@ export default function MarketPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [query, setQuery] = useState("");
-  const [market, setMarket] = useState<"J" | "Q">("J");
+  const market = "J"; // KIS API는 대부분의 순위 API에서 코스닥 미지원
   const [rankTab, setRankTab] = useState<RankTab>("volume");
   const [refreshing, setRefreshing] = useState(false);
   const { data: indices } = useIndices();
@@ -141,20 +141,6 @@ export default function MarketPage() {
       <div className="bg-[var(--card)] rounded-lg border border-[var(--border)] p-4">
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-lg font-medium">순위</h3>
-          <div className="flex gap-2">
-            <button
-              onClick={() => setMarket("J")}
-              className={`px-3 py-1 text-xs rounded ${market === "J" ? "bg-[var(--primary)] text-white" : "bg-[var(--secondary)]"}`}
-            >
-              코스피
-            </button>
-            <button
-              onClick={() => setMarket("Q")}
-              className={`px-3 py-1 text-xs rounded ${market === "Q" ? "bg-[var(--primary)] text-white" : "bg-[var(--secondary)]"}`}
-            >
-              코스닥
-            </button>
-          </div>
         </div>
 
         {/* Rank Tabs */}

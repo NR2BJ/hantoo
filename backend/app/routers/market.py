@@ -8,10 +8,12 @@ from app.schemas.market import (
     Candle,
     IndexQuote,
     Orderbook,
+    OrderbookEntry,
     SearchResult,
     StockQuote,
     TradeRecord,
 )
+from app.services.kis_client import KISApiError
 from app.services.quote_service import quote_service
 
 logger = logging.getLogger(__name__)
@@ -32,7 +34,18 @@ async def get_quote(
     account: ActiveAccount,
     db: DB,
 ):
-    return await quote_service.get_current_price(account, symbol, db)
+    try:
+        return await quote_service.get_current_price(account, symbol, db)
+    except KISApiError as e:
+        logger.info("KIS API error for quote %s: %s", symbol, e.msg)
+        return StockQuote(symbol=symbol, name=symbol, current_price=0, change=0,
+                          change_rate=0.0, change_sign="3", open_price=0, high_price=0,
+                          low_price=0, volume=0, trade_amount=0, prev_close=0, market_cap=0)
+    except Exception as e:
+        logger.warning("Failed to get quote for %s: %s", symbol, e)
+        return StockQuote(symbol=symbol, name=symbol, current_price=0, change=0,
+                          change_rate=0.0, change_sign="3", open_price=0, high_price=0,
+                          low_price=0, volume=0, trade_amount=0, prev_close=0, market_cap=0)
 
 
 @router.get("/candles", response_model=list[Candle])
@@ -44,7 +57,14 @@ async def get_candles(
     period: str = Query("D", pattern=r"^[DWM]$"),
     count: int = Query(100, ge=1, le=300),
 ):
-    return await quote_service.get_daily_candles(account, symbol, period, count, db)
+    try:
+        return await quote_service.get_daily_candles(account, symbol, period, count, db)
+    except KISApiError as e:
+        logger.info("KIS API error for candles %s: %s", symbol, e.msg)
+        return []
+    except Exception as e:
+        logger.warning("Failed to get candles for %s: %s", symbol, e)
+        return []
 
 
 @router.get("/candles/minute", response_model=list[Candle])
@@ -55,7 +75,14 @@ async def get_minute_candles(
     db: DB,
     interval: int = Query(1, ge=1, le=60),
 ):
-    return await quote_service.get_minute_candles(account, symbol, interval, db)
+    try:
+        return await quote_service.get_minute_candles(account, symbol, interval, db)
+    except KISApiError as e:
+        logger.info("KIS API error for minute candles %s: %s", symbol, e.msg)
+        return []
+    except Exception as e:
+        logger.warning("Failed to get minute candles for %s: %s", symbol, e)
+        return []
 
 
 @router.get("/orderbook", response_model=Orderbook)
@@ -65,7 +92,18 @@ async def get_orderbook(
     account: ActiveAccount,
     db: DB,
 ):
-    return await quote_service.get_orderbook(account, symbol, db)
+    try:
+        return await quote_service.get_orderbook(account, symbol, db)
+    except KISApiError as e:
+        logger.info("KIS API error for orderbook %s: %s", symbol, e.msg)
+        return Orderbook(symbol=symbol, ask=[OrderbookEntry(price=0, volume=0)] * 10,
+                         bid=[OrderbookEntry(price=0, volume=0)] * 10,
+                         total_ask_volume=0, total_bid_volume=0)
+    except Exception as e:
+        logger.warning("Failed to get orderbook for %s: %s", symbol, e)
+        return Orderbook(symbol=symbol, ask=[OrderbookEntry(price=0, volume=0)] * 10,
+                         bid=[OrderbookEntry(price=0, volume=0)] * 10,
+                         total_ask_volume=0, total_bid_volume=0)
 
 
 @router.get("/trades", response_model=list[TradeRecord])
@@ -75,7 +113,14 @@ async def get_trades(
     account: ActiveAccount,
     db: DB,
 ):
-    return await quote_service.get_trades(account, symbol, db)
+    try:
+        return await quote_service.get_trades(account, symbol, db)
+    except KISApiError as e:
+        logger.info("KIS API error for trades %s: %s", symbol, e.msg)
+        return []
+    except Exception as e:
+        logger.warning("Failed to get trades for %s: %s", symbol, e)
+        return []
 
 
 @router.get("/indices", response_model=list[IndexQuote])
