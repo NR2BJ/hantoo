@@ -138,6 +138,14 @@ export interface BuyableAmount {
 
 // ── Portfolio Types ──
 
+export interface ForeignCurrencyBalance {
+  currency: string;
+  deposit: number;
+  stock_value: number;
+  total_value: number;
+  exchange_rate: number;
+}
+
 export interface AccountBalance {
   total_value: number;
   cash: number;
@@ -145,6 +153,8 @@ export interface AccountBalance {
   total_pnl: number;
   total_pnl_rate: number;
   holding_count: number;
+  foreign_balances: ForeignCurrencyBalance[];
+  overseas_total_krw: number;
 }
 
 export interface Holding {
@@ -156,6 +166,20 @@ export interface Holding {
   value: number;
   pnl: number;
   pnl_rate: number;
+}
+
+export interface OverseasHolding {
+  symbol: string;
+  name: string;
+  market: string;
+  currency: string;
+  quantity: number;
+  avg_price: number;
+  current_price: number;
+  value_foreign: number;
+  pnl_foreign: number;
+  pnl_rate: number;
+  exchange_rate: number;
 }
 
 // Color helpers for Korean market convention

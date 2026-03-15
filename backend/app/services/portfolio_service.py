@@ -5,9 +5,14 @@ import logging
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.kis_account import KISAccount
-from app.schemas.portfolio import AccountBalance, Holding
+from app.schemas.portfolio import (
+    AccountBalance,
+    ForeignCurrencyBalance,
+    Holding,
+    OverseasHolding,
+)
 from app.services.cache import cache_get, cache_set
-from app.services.kis_client import kis_client
+from app.services.kis_client import KISApiError, kis_client
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +44,10 @@ class PortfolioService:
         account: KISAccount,
         db: AsyncSession,
     ) -> list[Holding]:
-        """Get list of holdings with live prices from KIS."""
+        """Get list of domestic holdings with live prices from KIS."""
+        if account.product_code != "01":
+            return []
+
         cache_key = f"kis:holdings:{account.id}"
         cached = await cache_get(cache_key)
         if cached:
@@ -88,12 +96,165 @@ class PortfolioService:
         await cache_set(cache_key, [h.model_dump() for h in holdings], 10)
         return holdings
 
+    async def get_overseas_holdings(
+        self,
+        account: KISAccount,
+        db: AsyncSession,
+    ) -> list[OverseasHolding]:
+        """Get overseas stock holdings from KIS (CTRP6504R)."""
+        if account.product_code != "01":
+            return []
+
+        cache_key = f"kis:overseas_holdings:{account.id}"
+        cached = await cache_get(cache_key)
+        if cached:
+            return [OverseasHolding(**h) for h in cached]
+
+        tr_id = _tr_id("CTRP6504R", account.environment)
+
+        try:
+            data = await kis_client.request(
+                account,
+                "GET",
+                "/uapi/overseas-stock/v1/trading/inquire-present-balance",
+                tr_id=tr_id,
+                params={
+                    "CANO": account.account_number,
+                    "ACNT_PRDT_CD": account.product_code,
+                    "WCRC_FRCR_DVSN_CD": "02",  # 외화 기준
+                    "NATN_CD": "840",  # USA
+                    "TR_MKET_CD": "00",  # 전체
+                    "INQR_DVSN_CD": "00",
+                },
+                db=db,
+            )
+        except KISApiError as e:
+            logger.warning("Overseas balance query failed: %s", e.msg)
+            return []
+        except Exception as e:
+            logger.warning("Overseas balance query error: %s", e)
+            return []
+
+        holdings = []
+        for item in data.get("output1", []):
+            qty = _safe_int(item.get("cblc_qty13"))
+            if qty <= 0:
+                continue
+
+            holdings.append(OverseasHolding(
+                symbol=item.get("pdno", ""),
+                name=item.get("prdt_name", ""),
+                market=item.get("tr_mket_name", ""),
+                currency=item.get("buy_crcy_cd", "USD"),
+                quantity=qty,
+                avg_price=_safe_float(item.get("pchs_avg_pric")),
+                current_price=_safe_float(item.get("ovrs_now_pric1")),
+                value_foreign=_safe_float(item.get("frcr_evlu_amt2")),
+                pnl_foreign=_safe_float(item.get("evlu_pfls_amt2")),
+                pnl_rate=_safe_float(item.get("evlu_pfls_rt1")),
+                exchange_rate=_safe_float(item.get("bass_exrt")),
+            ))
+
+        await cache_set(cache_key, [h.model_dump() for h in holdings], 10)
+        return holdings
+
+    async def _get_overseas_foreign_balances(
+        self,
+        account: KISAccount,
+        db: AsyncSession,
+    ) -> tuple[list[ForeignCurrencyBalance], int]:
+        """Get foreign currency balances and total overseas KRW value.
+
+        Returns (foreign_balances, overseas_total_krw).
+        """
+        if account.product_code != "01":
+            return [], 0
+
+        cache_key = f"kis:overseas_balance:{account.id}"
+        cached = await cache_get(cache_key)
+        if cached:
+            return (
+                [ForeignCurrencyBalance(**fb) for fb in cached["foreign_balances"]],
+                cached["overseas_total_krw"],
+            )
+
+        tr_id = _tr_id("CTRP6504R", account.environment)
+
+        try:
+            data = await kis_client.request(
+                account,
+                "GET",
+                "/uapi/overseas-stock/v1/trading/inquire-present-balance",
+                tr_id=tr_id,
+                params={
+                    "CANO": account.account_number,
+                    "ACNT_PRDT_CD": account.product_code,
+                    "WCRC_FRCR_DVSN_CD": "02",  # 외화 기준
+                    "NATN_CD": "840",  # USA
+                    "TR_MKET_CD": "00",
+                    "INQR_DVSN_CD": "00",
+                },
+                db=db,
+            )
+        except (KISApiError, Exception) as e:
+            logger.warning("Overseas balance query failed: %s", e)
+            return [], 0
+
+        # output2: per-currency summary
+        foreign_balances = []
+        output2 = data.get("output2", [])
+        if isinstance(output2, list):
+            for item in output2:
+                crcy = item.get("crcy_cd", "").strip()
+                if not crcy:
+                    continue
+                foreign_balances.append(ForeignCurrencyBalance(
+                    currency=crcy,
+                    deposit=_safe_float(item.get("frcr_dncl_amt_2", item.get("frcr_dncl_amt"))),
+                    stock_value=_safe_float(item.get("frcr_evlu_amt2")),
+                    total_value=_safe_float(item.get("frcr_dncl_amt_2", 0)) + _safe_float(item.get("frcr_evlu_amt2", 0)),
+                    exchange_rate=0.0,  # filled from output1 if available
+                ))
+
+        # Try to get exchange rate from output1 holdings
+        for item in data.get("output1", []):
+            exrt = _safe_float(item.get("bass_exrt"))
+            crcy = item.get("buy_crcy_cd", "").strip()
+            if exrt > 0 and crcy:
+                for fb in foreign_balances:
+                    if fb.currency == crcy and fb.exchange_rate == 0.0:
+                        fb.exchange_rate = exrt
+
+        # output3: grand total (KRW converted)
+        output3 = data.get("output3", {})
+        if isinstance(output3, list) and output3:
+            output3 = output3[0]
+        overseas_total_krw = _safe_int(output3.get("tot_asst_amt")) if isinstance(output3, dict) else 0
+
+        result = {
+            "foreign_balances": [fb.model_dump() for fb in foreign_balances],
+            "overseas_total_krw": overseas_total_krw,
+        }
+        await cache_set(cache_key, result, 10)
+        return foreign_balances, overseas_total_krw
+
     async def get_balance(
         self,
         account: KISAccount,
         db: AsyncSession,
     ) -> AccountBalance:
-        """Get account balance summary from KIS."""
+        """Get account balance summary from KIS.
+
+        Only supports brokerage accounts (product_code='01').
+        For non-brokerage accounts, raises an error.
+        """
+        if account.product_code != "01":
+            raise KISApiError(
+                rt_cd="9",
+                msg_cd="NOT_SUPPORTED",
+                msg=f"금융상품 계좌(상품코드: {account.product_code})는 잔고 조회를 지원하지 않습니다. 위탁계좌(01)만 지원됩니다.",
+            )
+
         cache_key = f"kis:balance:{account.id}"
         cached = await cache_get(cache_key)
         if cached:
@@ -147,6 +308,14 @@ class PortfolioService:
         else:
             total_pnl_rate = 0.0
 
+        # Get overseas foreign currency balances (best effort)
+        foreign_balances = []
+        overseas_total_krw = 0
+        try:
+            foreign_balances, overseas_total_krw = await self._get_overseas_foreign_balances(account, db)
+        except Exception as e:
+            logger.warning("Failed to get overseas balance: %s", e)
+
         balance = AccountBalance(
             total_value=total_value,
             cash=cash,
@@ -154,6 +323,8 @@ class PortfolioService:
             total_pnl=total_pnl,
             total_pnl_rate=total_pnl_rate,
             holding_count=holding_count,
+            foreign_balances=foreign_balances,
+            overseas_total_krw=overseas_total_krw,
         )
 
         await cache_set(cache_key, balance.model_dump(), 10)

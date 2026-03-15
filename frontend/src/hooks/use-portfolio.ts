@@ -3,7 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api-client";
 import { useTradingStore } from "@/stores/trading-store";
-import type { AccountBalance, Holding } from "@/types/market";
+import type { AccountBalance, Holding, OverseasHolding } from "@/types/market";
 
 function useAccountId() {
   return useTradingStore((s) => s.activeAccountId);
@@ -29,6 +29,20 @@ export function useHoldings() {
     queryKey: ["holdings", accountId],
     queryFn: () =>
       api.get(`/api/portfolio/holdings`, {
+        params: { account_id: accountId! },
+      }),
+    enabled: !!accountId,
+    refetchInterval: 10000,
+    staleTime: 5000,
+  });
+}
+
+export function useOverseasHoldings() {
+  const accountId = useAccountId();
+  return useQuery<OverseasHolding[]>({
+    queryKey: ["overseas-holdings", accountId],
+    queryFn: () =>
+      api.get(`/api/portfolio/overseas-holdings`, {
         params: { account_id: accountId! },
       }),
     enabled: !!accountId,
