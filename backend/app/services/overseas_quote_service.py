@@ -203,7 +203,22 @@ class OverseasQuoteService:
         for results in all_results:
             merged.extend(results)
 
-        # Limit results
+        # Sort by relevance: exact symbol > prefix > contains > rest
+        q_upper = query.upper()
+
+        def _relevance(r: OverseasSearchResult) -> tuple[int, str]:
+            sym = r.symbol.upper()
+            if sym == q_upper:
+                return (0, sym)          # exact match
+            if sym.startswith(q_upper):
+                return (1, sym)          # prefix match
+            if q_upper in sym:
+                return (2, sym)          # symbol contains query
+            if q_upper in r.name.upper():
+                return (3, sym)          # name contains query
+            return (4, sym)
+
+        merged.sort(key=_relevance)
         merged = merged[:50]
 
         await cache_set(cache_key, [r.model_dump() for r in merged], 30)
