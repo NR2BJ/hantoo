@@ -27,13 +27,13 @@
 | 상태 | 함수명 | API Path | tr_id | 설명 | Hantoo 파일 |
 |------|--------|----------|-------|------|-------------|
 | ✅ | inquire_price | `/uapi/domestic-stock/v1/quotations/inquire-price` | `FHKST01010100` | 현재가 조회 | `quote_service.py` |
-| ⬜ | inquire_price_2 | `/uapi/domestic-stock/v1/quotations/inquire-price-2` | — | 현재가 조회 (확장) | — |
+| ⬜ | inquire_price_2 | `/uapi/domestic-stock/v1/quotations/inquire-price-2` | `FHPST01010000` | 현재가 조회 (확장) | — |
 | ✅ | inquire_asking_price_exp_ccn | `/uapi/domestic-stock/v1/quotations/inquire-asking-price-exp-ccn` | `FHKST01010200` | 호가/예상체결 | `quote_service.py` |
 | ✅ | inquire_ccnl | `/uapi/domestic-stock/v1/quotations/inquire-ccnl` | `FHKST01010300` | 체결(틱) | `quote_service.py` |
 | ✅ | inquire_daily_price | `/uapi/domestic-stock/v1/quotations/inquire-daily-price` | `FHKST01010400` | 일별시세 | `quote_service.py` |
 | 🔲 | inquire_investor | `/uapi/domestic-stock/v1/quotations/inquire-investor` | `FHKST01010900` | 투자자별 매매동향 | — |
 | ✅ | inquire_time_itemchartprice | `/uapi/domestic-stock/v1/quotations/inquire-time-itemchartprice` | `FHKST03010200` | 분봉 차트 | `quote_service.py` |
-| 🔲 | inquire_daily_itemchartprice | `/uapi/domestic-stock/v1/quotations/inquire-daily-itemchartprice` | — | 일봉 차트 (기간별) | — |
+| 🔲 | inquire_daily_itemchartprice | `/uapi/domestic-stock/v1/quotations/inquire-daily-itemchartprice` | `FHKST03010100` | 일봉 차트 (기간별) | — |
 | ✅ | inquire_index_price | `/uapi/domestic-stock/v1/quotations/inquire-index-price` | `FHPUP02100000` | 지수 시세 | `quote_service.py` |
 | ⬜ | inquire_index_category_price | — | — | 업종별 지수 시세 | — |
 | ⬜ | inquire_index_daily_price | — | — | 지수 일별 시세 | — |
@@ -41,10 +41,10 @@
 | ⬜ | inquire_index_timeprice | — | — | 지수 시간별 시세 | — |
 | ⬜ | inquire_daily_indexchartprice | — | — | 지수 일봉 차트 | — |
 | ⬜ | inquire_time_indexchartprice | — | — | 지수 시간 차트 | — |
-| 🔲 | inquire_daily_trade_volume | — | — | 일별 거래량 상세 | — |
-| 🔲 | search_info | `/uapi/domestic-stock/v1/quotations/search-info` | — | 종목 기본정보 조회 | — |
+| 🔲 | inquire_daily_trade_volume | `/uapi/domestic-stock/v1/quotations/inquire-daily-trade-volume` | `FHKST03010800` | 일별 거래량 상세 | — |
+| 🔲 | search_info | `/uapi/domestic-stock/v1/quotations/search-info` | `CTPF1604R` | 종목 기본정보 조회 | — |
 | ⬜ | search_stock_info | — | — | 종목 상세정보 검색 | — |
-| 🔲 | inquire_overtime_price | — | — | 시간외 현재가 | — |
+| 🔲 | inquire_overtime_price | `/uapi/domestic-stock/v1/quotations/inquire-overtime-price` | `FHPST02300000` | 시간외 현재가 | — |
 | ⬜ | inquire_daily_overtimeprice | — | — | 시간외 일별 시세 | — |
 | ⬜ | inquire_overtime_asking_price | — | — | 시간외 호가 | — |
 
@@ -83,7 +83,7 @@
 | ⬜ | market_status_nxt | NXT 장 상태 |
 | ⬜ | market_status_total | 통합 장 상태 |
 | ⬜ | market_time | 장 시간 |
-| 🔲 | chk_holiday | 휴장일 확인 |
+| 🔲 | chk_holiday (`CTCA0903R`) | 휴장일 확인 |
 | ⬜ | market_value | 시가총액 (종목별) |
 | ⬜ | mktfunds | 시장 자금 |
 | ⬜ | intstock_grouplist | 관심종목 그룹 목록 |
@@ -111,7 +111,7 @@
 | ✅ | inquire_daily_ccld | `/uapi/domestic-stock/v1/trading/inquire-daily-ccld` | `TTTC8001R` / `VTTC8001R` | 체결내역 | `order_service.py` |
 | ✅ | inquire_balance | `/uapi/domestic-stock/v1/trading/inquire-balance` | `TTTC8434R` / `VTTC8434R` | 잔고(위탁) | `portfolio_service.py` |
 | ✅ | inquire_account_balance | `/uapi/domestic-stock/v1/trading/inquire-account-balance` | `CTRP6548R` | 계좌자산현황(비위탁) | `portfolio_service.py` |
-| 🔲 | inquire_balance_rlz_pl | — | — | 실현손익 조회 | — |
+| 🔲 | inquire_balance_rlz_pl | `/uapi/domestic-stock/v1/trading/inquire-balance-rlz-pl` | `TTTC8494R` | 실현손익 조회 | — |
 | ⬜ | after_hour_balance | — | — | 시간외 잔고 | — |
 | ⬜ | credit_balance | — | — | 신용 잔고 | — |
 | ⬜ | credit_by_company | — | — | 증권사별 신용 | — |
@@ -164,8 +164,8 @@
 | 상태 | 함수명 | API Path | tr_id | 설명 |
 |------|--------|----------|-------|------|
 | 🔲 | finance_income_statement | `/uapi/domestic-stock/v1/finance/income-statement` | `FHKST66430200` | 손익계산서 |
-| 🔲 | finance_balance_sheet | `/uapi/domestic-stock/v1/finance/balance-sheet` | — | 재무상태표 |
-| 🔲 | finance_financial_ratio | `/uapi/domestic-stock/v1/finance/financial-ratio` | — | 재무비율 |
+| 🔲 | finance_balance_sheet | `/uapi/domestic-stock/v1/finance/balance-sheet` | `FHKST66430100` | 재무상태표 |
+| 🔲 | finance_financial_ratio | `/uapi/domestic-stock/v1/finance/financial-ratio` | `FHKST66430300` | 재무비율 |
 | ⬜ | finance_growth_ratio | — | — | 성장비율 |
 | ⬜ | finance_profit_ratio | — | — | 수익비율 |
 | ⬜ | finance_stability_ratio | — | — | 안정성비율 |
@@ -226,7 +226,7 @@
 | 상태 | 함수명 | API Path | tr_id | 설명 |
 |------|--------|----------|-------|------|
 | 🔲 | ksdinfo_dividend | `/uapi/domestic-stock/v1/ksdinfo/dividend` | `HHKDB669102C0` | 배당정보 |
-| 🔲 | dividend_rate | — | — | 배당수익률 |
+| 🔲 | dividend_rate | `/uapi/domestic-stock/v1/ranking/dividend-rate` | `HHKDB13470100` | 배당수익률 |
 | ⬜ | ksdinfo_bonus_issue | — | — | 무상증자 |
 | ⬜ | ksdinfo_cap_dcrs | — | — | 감자 |
 | ⬜ | ksdinfo_forfeit | — | — | 실권 |
@@ -239,7 +239,7 @@
 | ⬜ | ksdinfo_rev_split | — | — | 액면분할/병합 |
 | ⬜ | ksdinfo_sharehld_meet | — | — | 주주총회 |
 | ⬜ | period_rights | — | — | 기간별 권리정보 |
-| 🔲 | news_title | — | — | 뉴스 제목 목록 |
+| 🔲 | news_title | `/uapi/domestic-stock/v1/quotations/news-title` | `FHKST01011800` | 뉴스 제목 목록 |
 
 ---
 
@@ -248,14 +248,14 @@
 | 상태 | 함수명 | API Path | tr_id | 설명 |
 |------|--------|----------|-------|------|
 | 🔲 | price | `/uapi/overseas-price/v1/quotations/price` | `HHDFS00000300` | 현재가 |
-| 🔲 | dailyprice | `/uapi/overseas-price/v1/quotations/dailyprice` | — | 일별 시세 |
+| 🔲 | dailyprice | `/uapi/overseas-price/v1/quotations/dailyprice` | `HHDFS76240000` | 일별 시세 |
 | 🔲 | asking_price | — | — | 호가 |
 | 🔲 | inquire_asking_price | — | — | 호가 상세 |
 | 🔲 | inquire_ccnl | — | — | 체결 내역 |
-| 🔲 | inquire_daily_chartprice | — | — | 일봉 차트 |
+| 🔲 | inquire_daily_chartprice | `/uapi/overseas-price/v1/quotations/inquire-daily-chartprice` | `FHKST03030100` | 일봉 차트 |
 | 🔲 | inquire_time_itemchartprice | — | — | 분봉 차트 |
 | 🔲 | inquire_time_indexchartprice | — | — | 해외지수 차트 |
-| 🔲 | inquire_search | — | — | 종목 검색 |
+| 🔲 | inquire_search | `/uapi/overseas-price/v1/quotations/inquire-search` | `HHDFS76410000` | 종목 검색 |
 | ⬜ | price_detail | — | — | 종목 상세 |
 | ⬜ | price_fluct | — | — | 등락률 |
 | ⬜ | delayed_asking_price_asia | — | — | 아시아 지연 호가 |
@@ -300,15 +300,15 @@
 | ⬜ | order (CN-SZ sell) | 〃 | `TTTS0304U` / `VTTS0304U` | 중국심천 매도 |
 | ⬜ | order (VN buy) | 〃 | `TTTS0311U` / `VTTS0311U` | 베트남 매수 |
 | ⬜ | order (VN sell) | 〃 | `TTTS0310U` / `VTTS0310U` | 베트남 매도 |
-| 🔲 | order_rvsecncl | — | — | 해외 주문 정정/취소 |
+| 🔲 | order_rvsecncl | `/uapi/overseas-stock/v1/trading/order-rvsecncl` | `TTTT1004U` / `VTTT1004U` | 해외 주문 정정/취소 |
 | ⬜ | daytime_order | — | — | 주간거래 주문 |
 | ⬜ | daytime_order_rvsecncl | — | — | 주간거래 정정/취소 |
 | ⬜ | order_resv | — | — | 해외 예약 주문 |
 | ⬜ | order_resv_ccnl | — | — | 예약 주문 체결 |
 | ⬜ | order_resv_list | — | — | 예약 주문 목록 |
-| 🔲 | inquire_balance | — | — | 해외 보유잔고 |
+| 🔲 | inquire_balance | `/uapi/overseas-stock/v1/trading/inquire-balance` | `TTTS3012R` / `VTTS3012R` | 해외 보유잔고 |
 | ✅ | inquire_present_balance | `/uapi/overseas-stock/v1/trading/inquire-present-balance` | `CTRP6504R` | 해외 현재잔고 |
-| 🔲 | inquire_ccnl | — | — | 해외 체결내역 |
+| 🔲 | inquire_ccnl | `/uapi/overseas-stock/v1/trading/inquire-ccnl` | `TTTS3035R` / `VTTS3035R` | 해외 체결내역 |
 | ⬜ | inquire_nccs | — | — | 해외 미체결 |
 | 🔲 | inquire_period_profit | — | — | 해외 기간 수익률 |
 | ⬜ | inquire_period_trans | — | — | 해외 기간 거래내역 |
