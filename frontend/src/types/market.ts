@@ -76,6 +76,66 @@ export interface Watchlist {
   items: WatchlistItem[];
 }
 
+// ── Order Types ──
+
+export interface OrderCreate {
+  symbol: string;
+  side: "buy" | "sell";
+  order_type: "limit" | "market";
+  quantity: number;
+  price?: number;
+}
+
+export interface OrderModify {
+  quantity: number;
+  price: number;
+}
+
+export interface OrderResponse {
+  id: string;
+  account_id: string;
+  symbol: string;
+  side: string;
+  order_type: string;
+  quantity: number;
+  price: number | null;
+  status: string;
+  filled_quantity: number;
+  filled_price: number | null;
+  kis_order_id: string | null;
+  submitted_at: string | null;
+  created_at: string;
+}
+
+export interface PendingOrder {
+  order_id: string;
+  symbol: string;
+  name: string;
+  side: string;
+  order_type: string;
+  quantity: number;
+  price: number;
+  unfilled_qty: number;
+  order_time: string;
+}
+
+export interface FilledOrder {
+  order_id: string;
+  symbol: string;
+  name: string;
+  side: string;
+  quantity: number;
+  price: number;
+  total_amount: number;
+  order_time: string;
+  filled_time: string;
+}
+
+export interface BuyableAmount {
+  orderable_cash: number;
+  orderable_qty: number;
+}
+
 // Color helpers for Korean market convention
 export function getPriceColor(changeSign: string): string {
   // 1=상한, 2=상승 → red, 4=하한, 5=하락 → blue, 3=보합 → gray

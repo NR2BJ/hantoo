@@ -28,6 +28,31 @@ class KISClient:
             self._http = httpx.AsyncClient(timeout=15.0)
         return self._http
 
+    async def get_hashkey(
+        self,
+        account: KISAccount,
+        body: dict,
+        *,
+        db,
+    ) -> str:
+        """Get hashkey for POST trading requests (required by KIS API)."""
+        token = await get_valid_token(account, db)
+        app_key = decrypt_value(account.app_key_enc)
+        app_secret = decrypt_value(account.app_secret_enc)
+        base_url = _get_base_url(account.environment)
+
+        headers = {
+            "appkey": app_key,
+            "appsecret": app_secret,
+            "Content-Type": "application/json; charset=utf-8",
+        }
+
+        url = f"{base_url}/uapi/hashkey"
+        resp = await self.http.post(url, headers=headers, json=body)
+        resp.raise_for_status()
+        data = resp.json()
+        return data.get("HASH", "")
+
     async def request(
         self,
         account: KISAccount,
@@ -38,6 +63,7 @@ class KISClient:
         body: dict | None = None,
         *,
         db,
+        use_hashkey: bool = False,
     ) -> dict:
         """Make an authenticated request to the KIS API."""
         await kis_rate_limiter.acquire(account.id)
@@ -55,6 +81,11 @@ class KISClient:
             "custtype": "P",
             "Content-Type": "application/json; charset=utf-8",
         }
+
+        # Add hashkey for POST trading requests
+        if use_hashkey and body:
+            hashkey = await self.get_hashkey(account, body, db=db)
+            headers["hashkey"] = hashkey
 
         url = f"{base_url}{path}"
         resp = await self.http.request(

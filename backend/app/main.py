@@ -53,13 +53,14 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
-    from app.routers import accounts, auth, market, setup, watchlists
+    from app.routers import accounts, auth, market, orders, setup, watchlists
 
     app.include_router(setup.router, prefix="/api", tags=["Setup"])
     app.include_router(auth.router, prefix="/api/auth", tags=["Auth"])
     app.include_router(accounts.router, prefix="/api/accounts", tags=["Accounts"])
     app.include_router(market.router, prefix="/api/market", tags=["Market"])
     app.include_router(watchlists.router, prefix="/api/watchlists", tags=["Watchlists"])
+    app.include_router(orders.router, prefix="/api/orders", tags=["Orders"])
 
     @app.get("/api/health")
     async def health():
