@@ -90,9 +90,9 @@ async def get_indices(
 
 @router.get("/search", response_model=list[SearchResult])
 async def search_stocks(
+    user: CurrentUser,
+    account: ActiveAccount,
+    db: DB,
     q: str = Query(..., min_length=1),
-    user: CurrentUser = None,
-    account: ActiveAccount = None,
-    db: DB = None,
 ):
     return await quote_service.search_stocks(account, q, db)
