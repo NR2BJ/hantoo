@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 def _safe_int(val, default=0) -> int:
     try:
-        return int(val)
+        return int(float(val))
     except (ValueError, TypeError):
         return default
 
@@ -35,7 +35,7 @@ def _opt_int(val) -> int | None:
     if val is None or (isinstance(val, str) and val.strip() == ""):
         return None
     try:
-        return int(val)
+        return int(float(val))
     except (ValueError, TypeError):
         return None
 
