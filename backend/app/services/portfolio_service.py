@@ -149,10 +149,10 @@ class PortfolioService:
         account: KISAccount,
         db: AsyncSession,
     ) -> list[OverseasHolding]:
-        """Get overseas stock holdings from KIS (CTRP6504R)."""
-        if account.product_code != "01":
-            return []
+        """Get overseas stock holdings from KIS (CTRP6504R).
 
+        Tries for all account types — gracefully returns [] on failure.
+        """
         cache_key = f"kis:overseas_holdings:{account.id}"
         cached = await cache_get(cache_key)
         if cached:
@@ -214,10 +214,8 @@ class PortfolioService:
         """Get foreign currency balances and total overseas KRW value.
 
         Returns (foreign_balances, overseas_total_krw).
+        Tries for all account types — gracefully returns ([], 0) on failure.
         """
-        if account.product_code != "01":
-            return [], 0
-
         cache_key = f"kis:overseas_balance:{account.id}"
         cached = await cache_get(cache_key)
         if cached:
@@ -437,6 +435,14 @@ class PortfolioService:
         else:
             total_pnl_rate = 0.0
 
+        # Get overseas foreign currency balances (best effort)
+        foreign_balances = []
+        overseas_total_krw = 0
+        try:
+            foreign_balances, overseas_total_krw = await self._get_overseas_foreign_balances(account, db)
+        except Exception as e:
+            logger.warning("Failed to get overseas balance for account_overview: %s", e)
+
         return AccountBalance(
             total_value=total_value,
             cash=cash,
@@ -444,6 +450,8 @@ class PortfolioService:
             total_pnl=total_pnl,
             total_pnl_rate=total_pnl_rate,
             holding_count=holding_count,
+            foreign_balances=foreign_balances,
+            overseas_total_krw=overseas_total_krw,
         )
 
     async def get_balance(
