@@ -108,8 +108,15 @@ class FinanceService:
             db=db,
         )
 
+        # 디버그: 응답 구조 로깅
+        logger.info("[income_statement] response keys: %s", list(data.keys()))
+        output = data.get("output", [])
+        if output:
+            logger.info("[income_statement] first row keys: %s", list(output[0].keys()) if isinstance(output, list) and output else "empty")
+            logger.info("[income_statement] first row sample: %s", {k: v for k, v in (output[0].items() if isinstance(output, list) and output else [])})
+
         items: list[IncomeStatementItem] = []
-        for row in data.get("output", []):
+        for row in output:
             stac_yymm = row.get("stac_yymm", "").strip()
             if not stac_yymm:
                 continue
@@ -153,8 +160,14 @@ class FinanceService:
             db=db,
         )
 
+        # 디버그
+        logger.info("[balance_sheet] response keys: %s", list(data.keys()))
+        output = data.get("output", [])
+        if output:
+            logger.info("[balance_sheet] first row keys: %s", list(output[0].keys()) if isinstance(output, list) and output else "empty")
+
         items: list[BalanceSheetItem] = []
-        for row in data.get("output", []):
+        for row in output:
             stac_yymm = row.get("stac_yymm", "").strip()
             if not stac_yymm:
                 continue
@@ -170,6 +183,9 @@ class FinanceService:
         return items
 
     # ── 재무비율 ──────────────────────────────────────────
+    # Note: KIS financial-ratio API provides: stac_yymm, grs, bsop_prfi_inrt,
+    # ntin_inrt, roe_val, eps, sps, bps, rsrv_rate, lblt_rate
+    # PER/PBR/ROA are NOT in this API (they're in the stock quote).
 
     async def get_financial_ratio(
         self,
@@ -197,8 +213,15 @@ class FinanceService:
             db=db,
         )
 
+        # 디버그
+        logger.info("[financial_ratio] response keys: %s", list(data.keys()))
+        output = data.get("output", [])
+        if output:
+            logger.info("[financial_ratio] first row keys: %s", list(output[0].keys()) if isinstance(output, list) and output else "empty")
+            logger.info("[financial_ratio] first row data: %s", dict(output[0]) if isinstance(output, list) and output else {})
+
         items: list[FinancialRatioItem] = []
-        for row in data.get("output", []):
+        for row in output:
             stac_yymm = row.get("stac_yymm", "").strip()
             if not stac_yymm:
                 continue
@@ -206,6 +229,8 @@ class FinanceService:
                 FinancialRatioItem(
                     period=stac_yymm,
                     roe=_opt_float(row.get("roe_val")),
+                    # roa_val, per, pbr are NOT documented in this API
+                    # Try anyway in case API returns extra fields
                     roa=_opt_float(row.get("roa_val")),
                     per=_opt_float(row.get("per")),
                     pbr=_opt_float(row.get("pbr")),
@@ -219,6 +244,9 @@ class FinanceService:
         return items
 
     # ── 실적추정치 ────────────────────────────────────────
+    # Reference: examples_llm/domestic_stock/estimate_perform/estimate_perform.py
+    # Returns output1~output4 with generic fields: sht_cd, item_kor_nm, dt, data1~data5
+    # NOT the same fields as income-statement.
 
     async def get_estimate(
         self,
@@ -242,19 +270,55 @@ class FinanceService:
             db=db,
         )
 
+        # 디버그: 실제 응답 구조 파악
+        logger.info("[estimate] response keys: %s", list(data.keys()))
+        for key in ["output", "output1", "output2", "output3", "output4"]:
+            val = data.get(key)
+            if val:
+                if isinstance(val, list) and val:
+                    logger.info("[estimate] %s has %d rows, first row keys: %s", key, len(val), list(val[0].keys()))
+                    logger.info("[estimate] %s first row data: %s", key, dict(val[0]))
+                elif isinstance(val, dict):
+                    logger.info("[estimate] %s is dict with keys: %s", key, list(val.keys()))
+
         items: list[EstimateItem] = []
-        # estimate-perform returns output1~output4, not output
-        for row in data.get("output1", data.get("output", [])):
-            stac_yymm = row.get("stac_yymm", "").strip()
-            if not stac_yymm:
+
+        # output1을 먼저 시도 — 이 API는 output1~4를 반환
+        output = data.get("output1", data.get("output", []))
+        if not isinstance(output, list):
+            output = [output] if output else []
+
+        for row in output:
+            # 두 가지 필드 형식 시도:
+            # Format A (income-statement style): stac_yymm, sale_account, bsop_prti, thtr_ntin
+            # Format B (estimate-perform style): dt, data1~data5
+            period = (
+                row.get("stac_yymm", "").strip()
+                or row.get("dt", "").strip()
+            )
+            if not period:
                 continue
+
+            # Format A 시도
+            revenue = _opt_int(row.get("sale_account"))
+            op_profit = _opt_int(row.get("bsop_prti"))
+            net_income = _opt_int(row.get("thtr_ntin"))
+            eps = _opt_int(row.get("eps"))
+
+            # Format B fallback (data1~data5 순서는 API 마다 다를 수 있음)
+            if revenue is None and op_profit is None and net_income is None:
+                revenue = _opt_int(row.get("data1"))
+                op_profit = _opt_int(row.get("data2"))
+                net_income = _opt_int(row.get("data3"))
+                eps = _opt_int(row.get("data4"))
+
             items.append(
                 EstimateItem(
-                    period=stac_yymm,
-                    revenue_est=_opt_int(row.get("sale_account")),
-                    op_profit_est=_opt_int(row.get("bsop_prti")),
-                    net_income_est=_opt_int(row.get("thtr_ntin")),
-                    eps_est=_opt_int(row.get("eps")),
+                    period=period,
+                    revenue_est=revenue,
+                    op_profit_est=op_profit,
+                    net_income_est=net_income,
+                    eps_est=eps,
                 )
             )
         await cache_set(cache_key, [i.model_dump() for i in items], 1800)
@@ -293,8 +357,15 @@ class FinanceService:
             db=db,
         )
 
+        # 디버그
+        logger.info("[invest_opinion] response keys: %s", list(data.keys()))
+        output = data.get("output", [])
+        if output:
+            logger.info("[invest_opinion] first row keys: %s", list(output[0].keys()) if isinstance(output, list) and output else "empty")
+            logger.info("[invest_opinion] first row: %s", dict(output[0]) if isinstance(output, list) and output else {})
+
         items: list[InvestOpinionItem] = []
-        for row in data.get("output", []):
+        for row in output:
             date = row.get("stck_bsop_date", "").strip()
             if not date:
                 continue

@@ -87,6 +87,14 @@ class CorporateService:
             db=db,
         )
 
+        # 디버그
+        logger.info("[dividend] response keys: %s", list(data.keys()))
+        for key in ["output", "output1"]:
+            val = data.get(key)
+            if val and isinstance(val, list) and val:
+                logger.info("[dividend] %s has %d rows, first row keys: %s", key, len(val), list(val[0].keys()))
+                logger.info("[dividend] %s first row: %s", key, dict(val[0]))
+
         items: list[DividendItem] = []
         # output1 (not output)
         for row in data.get("output1", data.get("output", [])):
@@ -109,7 +117,8 @@ class CorporateService:
 
     # ── 배당수익률 랭킹 ──────────────────────────────────
     # Reference: examples_llm/domestic_stock/dividend_rate/dividend_rate.py
-    # Uses completely different params: CTS_AREA, GB1, UPJONG, GB2, GB3, F_DT, T_DT, GB4
+    # COLUMN_MAPPING: rank, sht_cd, record_date, per_sto_divi_amt, divi_rate, divi_kind
+    # Note: no stock name or current price documented — using fallbacks
 
     async def get_dividend_rate_ranking(
         self,
@@ -149,19 +158,46 @@ class CorporateService:
             db=db,
         )
 
+        # 디버그
+        logger.info("[dividend_rate] response keys: %s", list(data.keys()))
+        for key in ["output", "output1"]:
+            val = data.get(key)
+            if val and isinstance(val, list) and val:
+                logger.info("[dividend_rate] %s has %d rows, first row keys: %s", key, len(val), list(val[0].keys()))
+                logger.info("[dividend_rate] %s first row: %s", key, dict(val[0]))
+
         items: list[DividendRankItem] = []
-        for idx, row in enumerate(data.get("output1", data.get("output", [])), 1):
-            sym = row.get("mksc_shrn_iscd", row.get("sht_cd", "")).strip()
-            name = row.get("hts_kor_isnm", row.get("isin_name", "")).strip()
-            if not sym or not name:
+        output = data.get("output1", data.get("output", []))
+        if not isinstance(output, list):
+            output = []
+
+        for idx, row in enumerate(output, 1):
+            # Try multiple field name patterns for symbol
+            sym = (
+                row.get("mksc_shrn_iscd", "").strip()
+                or row.get("sht_cd", "").strip()
+            )
+            # Try multiple field name patterns for name
+            name = (
+                row.get("hts_kor_isnm", "").strip()
+                or row.get("isin_name", "").strip()
+                or row.get("prdt_abrv_name", "").strip()
+            )
+            if not sym:
                 continue
+            # If no name, use symbol as fallback
+            if not name:
+                name = sym
+
             items.append(
                 DividendRankItem(
-                    rank=idx,
+                    rank=_safe_int(row.get("rank", idx)),
                     symbol=sym,
                     name=name,
                     div_rate=_safe_float(row.get("divi_rate", row.get("sht_divi_rate", 0))),
-                    current_price=_safe_int(row.get("stck_prpr", row.get("thdt_clpr", 0))),
+                    current_price=_safe_int(
+                        row.get("stck_prpr", row.get("thdt_clpr", 0))
+                    ),
                     dps=_opt_int(row.get("per_sto_divi_amt")),
                 )
             )
@@ -200,14 +236,19 @@ class CorporateService:
             db=db,
         )
 
+        # 디버그
+        logger.info("[news] response keys: %s", list(data.keys()))
+        for key in ["output", "output1"]:
+            val = data.get(key)
+            if val and isinstance(val, list) and val:
+                logger.info("[news] %s has %d rows, first row keys: %s", key, len(val), list(val[0].keys()))
+
         items: list[NewsItem] = []
-        # output1 (not output)
         output = data.get("output1", data.get("output", []))
         if isinstance(output, list):
             for row in output:
                 title = row.get("hts_pbnt_titl_cntt", "").strip()
                 if not title:
-                    # fallback field names
                     title = row.get("news_titl", row.get("titl", "")).strip()
                 if not title:
                     continue
@@ -226,8 +267,9 @@ class CorporateService:
         return items
 
     # ── 종목 기본정보 ────────────────────────────────────
-    # Reference: examples_llm/domestic_stock/search_info/search_info.py
-    # Uses lowercase params: pdno, prdt_type_cd
+    # Primary: search-stock-info (CTPF1002R) — 91+ fields
+    # Fallback: search-info (CTPF1604R) — 12 fields only
+    # Reference: examples_llm/domestic_stock/search_stock_info/search_stock_info.py
 
     async def get_stock_info(
         self,
@@ -240,17 +282,33 @@ class CorporateService:
         if cached:
             return StockInfoDetail(**cached)
 
-        data = await kis_client.request(
-            account,
-            "GET",
-            "/uapi/domestic-stock/v1/quotations/search-info",
-            tr_id="CTPF1604R",
-            params={
-                "PDNO": symbol,
-                "PRDT_TYPE_CD": "300",
-            },
-            db=db,
-        )
+        # Try CTPF1002R (search-stock-info) first — has many more fields
+        try:
+            data = await kis_client.request(
+                account,
+                "GET",
+                "/uapi/domestic-stock/v1/quotations/search-stock-info",
+                tr_id="CTPF1002R",
+                params={
+                    "PRDT_TYPE_CD": "300",
+                    "PDNO": symbol,
+                },
+                db=db,
+            )
+        except Exception as e:
+            logger.warning("[stock_info] CTPF1002R failed for %s: %s, trying CTPF1604R", symbol, e)
+            # Fallback to CTPF1604R
+            data = await kis_client.request(
+                account,
+                "GET",
+                "/uapi/domestic-stock/v1/quotations/search-info",
+                tr_id="CTPF1604R",
+                params={
+                    "PDNO": symbol,
+                    "PRDT_TYPE_CD": "300",
+                },
+                db=db,
+            )
 
         output = data.get("output", {})
         if isinstance(output, list) and len(output) > 0:
@@ -258,30 +316,63 @@ class CorporateService:
         elif isinstance(output, list):
             output = {}
 
-        logger.info("Stock info keys for %s: %s", symbol, list(output.keys())[:20] if output else "empty")
+        logger.info("[stock_info] keys for %s: %s", symbol, list(output.keys())[:30] if output else "empty")
+        logger.info("[stock_info] sample data: %s", {k: output.get(k) for k in [
+            "prdt_abrv_name", "prdt_name", "prdt_eng_name", "mket_id_cd",
+            "lstg_stqt", "papr", "cpta", "std_idst_clsf_cd_name",
+            "scts_mket_lstg_dt", "kosdaq_mket_lstg_dt",
+            "rprs_mrkt_kor_name", "std_pdno", "cpfn",
+            "idx_bztp_lcls_cd_name", "idx_bztp_mcls_cd_name",
+        ] if k in (output or {})})
 
-        # 필드명은 KIS 응답에 따라 다양할 수 있음 — 여러 후보 시도
+        # Build info from available fields
+        name = (
+            output.get("prdt_abrv_name", "")
+            or output.get("prdt_name", "")
+            or output.get("prdt_eng_name", "")
+        )
+        if isinstance(name, str):
+            name = name.strip()
+
+        # Market: CTPF1002R has mket_id_cd, CTPF1604R has rprs_mrkt_kor_name
+        market_code = output.get("mket_id_cd", "").strip()
+        market_name = output.get("rprs_mrkt_kor_name", "").strip()
+        if market_code == "STK":
+            market_str = "KOSPI"
+        elif market_code == "KSQ":
+            market_str = "KOSDAQ"
+        elif market_name:
+            market_str = market_name
+        elif output.get("std_pdno", ""):
+            market_str = output.get("std_pdno", "").strip()
+        else:
+            market_str = ""
+
+        # Sector: multiple fallback fields
+        sector = (
+            output.get("idx_bztp_mcls_cd_name", "").strip()
+            or output.get("idx_bztp_lcls_cd_name", "").strip()
+            or output.get("std_idst_clsf_cd_name", "").strip()
+        ) or None
+
+        # Listing date: check multiple fields
+        listing_date = (
+            output.get("scts_mket_lstg_dt", "").strip()
+            or output.get("kosdaq_mket_lstg_dt", "").strip()
+            or output.get("lstg_dt", "").strip()
+            or output.get("frst_erlm_dt", "").strip()
+            or output.get("sale_strt_dt", "").strip()
+        ) or None
+
         info = StockInfoDetail(
             symbol=symbol,
-            name=(
-                output.get("prdt_abrv_name", "")
-                or output.get("prdt_name", "")
-                or output.get("prdt_eng_name", "")
-            ).strip(),
-            market=(
-                output.get("rprs_mrkt_kor_name", "")
-                or output.get("std_pdno", "")
-            ).strip(),
-            sector=output.get("std_idst_clsf_cd_name", "").strip() or None,
-            listing_date=(
-                output.get("lstg_dt", "")
-                or output.get("scts_mket_lstg_dt", "")
-                or output.get("frst_erlm_dt", "")
-                or output.get("sale_strt_dt", "")
-            ).strip() or None,
+            name=name,
+            market=market_str,
+            sector=sector,
+            listing_date=listing_date,
             face_value=_opt_int(output.get("papr")),
             shares_outstanding=_opt_int(output.get("lstg_stqt")),
-            capital=_opt_int(output.get("cpfn")),
+            capital=_opt_int(output.get("cpta", output.get("cpfn"))),
         )
         await cache_set(cache_key, info.model_dump(), 86400)
         return info
