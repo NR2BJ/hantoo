@@ -109,7 +109,6 @@ export function useIndices() {
 }
 
 export function useSearch(query: string) {
-  const accountId = useAccountId();
   const [debouncedQuery, setDebouncedQuery] = useState(query);
 
   useEffect(() => {
@@ -118,12 +117,12 @@ export function useSearch(query: string) {
   }, [query]);
 
   return useQuery<SearchResult[]>({
-    queryKey: ["search", debouncedQuery, accountId],
+    queryKey: ["search", debouncedQuery],
     queryFn: () =>
       api.get(`/api/market/search`, {
-        params: { q: debouncedQuery, account_id: accountId! },
+        params: { q: debouncedQuery },
       }),
-    enabled: debouncedQuery.length >= 1 && !!accountId,
+    enabled: debouncedQuery.length >= 1,
     staleTime: 60000,
   });
 }

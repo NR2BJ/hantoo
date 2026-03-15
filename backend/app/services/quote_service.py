@@ -12,8 +12,16 @@ from app.schemas.market import (
 )
 from app.services.cache import cache_get, cache_set
 from app.services.kis_client import kis_client
+from app.services.stock_list import search_local
 
 logger = logging.getLogger(__name__)
+
+# Fallback index names (KIS API sometimes omits them)
+INDEX_NAMES = {
+    "0001": "코스피",
+    "1001": "코스닥",
+    "2001": "코스피200",
+}
 
 
 def _safe_int(val, default=0) -> int:
@@ -253,7 +261,7 @@ class QuoteService:
 
         index = IndexQuote(
             code=index_code,
-            name=out.get("hts_kor_isnm", ""),
+            name=out.get("hts_kor_isnm") or INDEX_NAMES.get(index_code, index_code),
             current=_safe_float(out.get("bstp_nmix_prpr")),
             change=_safe_float(out.get("bstp_nmix_prdy_vrss")),
             change_rate=_safe_float(out.get("bstp_nmix_prdy_ctrt")),
@@ -264,40 +272,10 @@ class QuoteService:
         return index
 
     async def search_stocks(
-        self, account: KISAccount, query: str, db
+        self, query: str
     ) -> list[SearchResult]:
-        cache_key = f"kis:search:{query}"
-        cached = await cache_get(cache_key)
-        if cached:
-            return [SearchResult(**r) for r in cached]
-
-        data = await kis_client.request(
-            account,
-            "GET",
-            "/uapi/domestic-stock/v1/quotations/search-stock-info",
-            tr_id="CTPF1604R",
-            params={
-                "PRDT_TYPE_CD": "300",
-                "PDNO": "",
-                "PRDT_GRP_CD": "",
-                "KEYWORD": query,
-            },
-            db=db,
-        )
-
-        results = []
-        for item in data.get("output2", []):
-            market = "KOSPI" if item.get("mrkt_cls_code") == "1" else "KOSDAQ"
-            results.append(
-                SearchResult(
-                    symbol=item.get("pdno", ""),
-                    name=item.get("prdt_name", ""),
-                    market=market,
-                )
-            )
-
-        await cache_set(cache_key, [r.model_dump() for r in results], 300)
-        return results
+        """Search stocks locally using KRX stock list (no KIS API needed)."""
+        return await search_local(query)
 
 
 quote_service = QuoteService()
