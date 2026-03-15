@@ -25,7 +25,8 @@ async def get_volume_rank(
     try:
         return await ranking_service.get_volume_rank(account, db, market=market)
     except KISApiError as e:
-        raise HTTPException(400, f"KIS API error: {e.msg}")
+        logger.info("KIS API error for ranking: %s", e.msg)
+        return []
     except Exception as e:
         logger.warning("Failed to get volume rank: %s", e)
         return []
@@ -43,7 +44,8 @@ async def get_fluctuation(
     try:
         return await ranking_service.get_fluctuation(account, db, market=market, sort=sort)
     except KISApiError as e:
-        raise HTTPException(400, f"KIS API error: {e.msg}")
+        logger.info("KIS API error for ranking: %s", e.msg)
+        return []
     except Exception as e:
         logger.warning("Failed to get fluctuation: %s", e)
         return []
@@ -60,7 +62,8 @@ async def get_market_cap(
     try:
         return await ranking_service.get_market_cap(account, db, market=market)
     except KISApiError as e:
-        raise HTTPException(400, f"KIS API error: {e.msg}")
+        logger.info("KIS API error for ranking: %s", e.msg)
+        return []
     except Exception as e:
         logger.warning("Failed to get market cap rank: %s", e)
         return []
@@ -77,7 +80,8 @@ async def get_top_interest(
     try:
         return await ranking_service.get_top_interest(account, db, market=market)
     except KISApiError as e:
-        raise HTTPException(400, f"KIS API error: {e.msg}")
+        logger.info("KIS API error for ranking: %s", e.msg)
+        return []
     except Exception as e:
         logger.warning("Failed to get top interest: %s", e)
         return []
@@ -95,7 +99,8 @@ async def get_near_highlow(
     try:
         return await ranking_service.get_near_highlow(account, db, market=market, sort=sort)
     except KISApiError as e:
-        raise HTTPException(400, f"KIS API error: {e.msg}")
+        logger.info("KIS API error for ranking: %s", e.msg)
+        return []
     except Exception as e:
         logger.warning("Failed to get highlow rank: %s", e)
         return []
@@ -112,7 +117,8 @@ async def get_investor(
     try:
         return await ranking_service.get_investor(account, symbol, db)
     except KISApiError as e:
-        raise HTTPException(400, f"KIS API error: {e.msg}")
+        logger.info("KIS API error for ranking: %s", e.msg)
+        return []
     except Exception as e:
         logger.warning("Failed to get investor data: %s", e)
         return []
@@ -129,7 +135,8 @@ async def get_foreign_institution(
     try:
         return await ranking_service.get_foreign_institution(account, db, market=market)
     except KISApiError as e:
-        raise HTTPException(400, f"KIS API error: {e.msg}")
+        logger.info("KIS API error for ranking: %s", e.msg)
+        return []
     except Exception as e:
         logger.warning("Failed to get foreign institution data: %s", e)
         return []

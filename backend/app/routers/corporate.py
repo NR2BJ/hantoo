@@ -30,7 +30,8 @@ async def get_dividend(
     try:
         return await corporate_service.get_dividend(account, symbol, db)
     except KISApiError as e:
-        raise HTTPException(400, f"KIS API error: {e.msg}")
+        logger.info("KIS API error for corporate: %s", e.msg)
+        return []
     except Exception as e:
         logger.warning("Failed to get dividend for %s: %s", symbol, e)
         return []
@@ -47,7 +48,8 @@ async def get_dividend_rate_ranking(
     try:
         return await corporate_service.get_dividend_rate_ranking(account, db, market=market)
     except KISApiError as e:
-        raise HTTPException(400, f"KIS API error: {e.msg}")
+        logger.info("KIS API error for corporate: %s", e.msg)
+        return []
     except Exception as e:
         logger.warning("Failed to get dividend rate ranking: %s", e)
         return []
@@ -64,7 +66,8 @@ async def get_news(
     try:
         return await corporate_service.get_news(account, symbol, db)
     except KISApiError as e:
-        raise HTTPException(400, f"KIS API error: {e.msg}")
+        logger.info("KIS API error for corporate: %s", e.msg)
+        return []
     except Exception as e:
         logger.warning("Failed to get news for %s: %s", symbol, e)
         return []
@@ -81,7 +84,12 @@ async def get_stock_info(
     try:
         return await corporate_service.get_stock_info(account, symbol, db)
     except KISApiError as e:
-        raise HTTPException(400, f"KIS API error: {e.msg}")
+        logger.info("KIS API error for corporate: %s", e.msg)
+        return StockInfoDetail(
+            symbol=symbol, name=symbol, market="", sector=None,
+            listing_date=None, face_value=None,
+            shares_outstanding=None, capital=None,
+        )
     except Exception as e:
         logger.warning("Failed to get stock info for %s: %s", symbol, e)
         return StockInfoDetail(

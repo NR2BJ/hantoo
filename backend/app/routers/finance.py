@@ -32,7 +32,8 @@ async def get_income_statement(
     try:
         return await finance_service.get_income_statement(account, symbol, db, period=period)
     except KISApiError as e:
-        raise HTTPException(400, f"KIS API error: {e.msg}")
+        logger.info("KIS API error for finance: %s", e.msg)
+        return []
     except Exception as e:
         logger.warning("Failed to get income statement for %s: %s", symbol, e)
         return []
@@ -50,7 +51,8 @@ async def get_balance_sheet(
     try:
         return await finance_service.get_balance_sheet(account, symbol, db, period=period)
     except KISApiError as e:
-        raise HTTPException(400, f"KIS API error: {e.msg}")
+        logger.info("KIS API error for finance: %s", e.msg)
+        return []
     except Exception as e:
         logger.warning("Failed to get balance sheet for %s: %s", symbol, e)
         return []
@@ -68,7 +70,8 @@ async def get_financial_ratio(
     try:
         return await finance_service.get_financial_ratio(account, symbol, db, period=period)
     except KISApiError as e:
-        raise HTTPException(400, f"KIS API error: {e.msg}")
+        logger.info("KIS API error for finance: %s", e.msg)
+        return []
     except Exception as e:
         logger.warning("Failed to get financial ratio for %s: %s", symbol, e)
         return []
@@ -85,7 +88,8 @@ async def get_estimate(
     try:
         return await finance_service.get_estimate(account, symbol, db)
     except KISApiError as e:
-        raise HTTPException(400, f"KIS API error: {e.msg}")
+        logger.info("KIS API error for finance: %s", e.msg)
+        return []
     except Exception as e:
         logger.warning("Failed to get estimate for %s: %s", symbol, e)
         return []
@@ -102,7 +106,8 @@ async def get_invest_opinion(
     try:
         return await finance_service.get_invest_opinion(account, symbol, db)
     except KISApiError as e:
-        raise HTTPException(400, f"KIS API error: {e.msg}")
+        logger.info("KIS API error for finance: %s", e.msg)
+        return []
     except Exception as e:
         logger.warning("Failed to get invest opinion for %s: %s", symbol, e)
         return []
