@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 import { api } from "@/lib/api-client";
 import { useTradingStore } from "@/stores/trading-store";
@@ -28,6 +28,7 @@ export function useQuote(symbol: string) {
     enabled: !!symbol && !!accountId,
     refetchInterval: 5000,
     staleTime: 3000,
+    placeholderData: keepPreviousData,
   });
 }
 
@@ -105,6 +106,7 @@ export function useIndices() {
     enabled: !!accountId,
     refetchInterval: 10000,
     staleTime: 5000,
+    placeholderData: keepPreviousData,
   });
 }
 

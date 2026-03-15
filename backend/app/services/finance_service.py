@@ -31,6 +31,51 @@ def _safe_float(val, default=0.0) -> float:
         return default
 
 
+def _opt_int(val) -> int | None:
+    """Convert to int, returning None only if raw value is empty/missing."""
+    if val is None or (isinstance(val, str) and val.strip() == ""):
+        return None
+    try:
+        return int(val)
+    except (ValueError, TypeError):
+        return None
+
+
+def _opt_float(val) -> float | None:
+    """Convert to float, returning None only if raw value is empty/missing."""
+    if val is None or (isinstance(val, str) and val.strip() == ""):
+        return None
+    try:
+        return float(val)
+    except (ValueError, TypeError):
+        return None
+
+
+# 투자의견 코드 → 한글 매핑
+_OPINION_CODE_MAP = {
+    "1": "강력매수",
+    "2": "매수",
+    "3": "중립",
+    "4": "매도",
+    "5": "강력매도",
+}
+
+
+def _opinion_change(cur_code: str, prev_code: str) -> str:
+    """Compare opinion codes to determine change direction."""
+    if not cur_code or not prev_code:
+        return "신규"
+    try:
+        c, p = int(cur_code), int(prev_code)
+        if c < p:
+            return "상향"
+        elif c > p:
+            return "하향"
+        return "유지"
+    except (ValueError, TypeError):
+        return "유지"
+
+
 class FinanceService:
     """Financial statements, estimates, and investment opinions via KIS API."""
 
@@ -71,9 +116,9 @@ class FinanceService:
             items.append(
                 IncomeStatementItem(
                     period=stac_yymm,
-                    revenue=_safe_int(row.get("sale_account")) or None,
-                    operating_profit=_safe_int(row.get("bsop_prti")) or None,
-                    net_income=_safe_int(row.get("thtr_ntin")) or None,
+                    revenue=_opt_int(row.get("sale_account")),
+                    operating_profit=_opt_int(row.get("bsop_prti")),
+                    net_income=_opt_int(row.get("thtr_ntin")),
                     eps=None,  # EPS는 재무비율 API에서 제공
                 )
             )
@@ -116,9 +161,9 @@ class FinanceService:
             items.append(
                 BalanceSheetItem(
                     period=stac_yymm,
-                    total_assets=_safe_int(row.get("total_aset")) or None,
-                    total_liabilities=_safe_int(row.get("total_lblt")) or None,
-                    total_equity=_safe_int(row.get("total_cptl")) or None,
+                    total_assets=_opt_int(row.get("total_aset")),
+                    total_liabilities=_opt_int(row.get("total_lblt")),
+                    total_equity=_opt_int(row.get("total_cptl")),
                 )
             )
         await cache_set(cache_key, [i.model_dump() for i in items], 3600)
@@ -160,14 +205,14 @@ class FinanceService:
             items.append(
                 FinancialRatioItem(
                     period=stac_yymm,
-                    roe=_safe_float(row.get("roe_val")) or None,
-                    roa=_safe_float(row.get("roa_val")) or None,
-                    per=_safe_float(row.get("per")) or None,
-                    pbr=_safe_float(row.get("pbr")) or None,
-                    eps=_safe_int(row.get("eps")) or None,
-                    bps=_safe_int(row.get("bps")) or None,
-                    debt_ratio=_safe_float(row.get("lblt_rate")) or None,
-                    reserve_ratio=_safe_float(row.get("rsrv_rate")) or None,
+                    roe=_opt_float(row.get("roe_val")),
+                    roa=_opt_float(row.get("roa_val")),
+                    per=_opt_float(row.get("per")),
+                    pbr=_opt_float(row.get("pbr")),
+                    eps=_opt_int(row.get("eps")),
+                    bps=_opt_int(row.get("bps")),
+                    debt_ratio=_opt_float(row.get("lblt_rate")),
+                    reserve_ratio=_opt_float(row.get("rsrv_rate")),
                 )
             )
         await cache_set(cache_key, [i.model_dump() for i in items], 3600)
@@ -192,24 +237,24 @@ class FinanceService:
             "/uapi/domestic-stock/v1/quotations/estimate-perform",
             tr_id="HHKST668300C0",
             params={
-                "FID_COND_MRKT_DIV_CODE": "J",
-                "FID_INPUT_ISCD": symbol,
+                "SHT_CD": symbol,
             },
             db=db,
         )
 
         items: list[EstimateItem] = []
-        for row in data.get("output", []):
+        # estimate-perform returns output1~output4, not output
+        for row in data.get("output1", data.get("output", [])):
             stac_yymm = row.get("stac_yymm", "").strip()
             if not stac_yymm:
                 continue
             items.append(
                 EstimateItem(
                     period=stac_yymm,
-                    revenue_est=_safe_int(row.get("sale_account")) or None,
-                    op_profit_est=_safe_int(row.get("bsop_prti")) or None,
-                    net_income_est=_safe_int(row.get("thtr_ntin")) or None,
-                    eps_est=_safe_int(row.get("eps")) or None,
+                    revenue_est=_opt_int(row.get("sale_account")),
+                    op_profit_est=_opt_int(row.get("bsop_prti")),
+                    net_income_est=_opt_int(row.get("thtr_ntin")),
+                    eps_est=_opt_int(row.get("eps")),
                 )
             )
         await cache_set(cache_key, [i.model_dump() for i in items], 1800)
@@ -239,11 +284,11 @@ class FinanceService:
             "/uapi/domestic-stock/v1/quotations/invest-opinion",
             tr_id="FHKST663300C0",
             params={
-                "FID_COND_MRKT_DIV_CODE": "J",
-                "FID_COND_SCR_DIV_CODE": "16633",
-                "FID_INPUT_ISCD": symbol,
-                "FID_INPUT_DATE_1": date_from,
-                "FID_INPUT_DATE_2": date_to,
+                "fid_cond_mrkt_div_code": "J",
+                "fid_cond_scr_div_code": "16633",
+                "fid_input_iscd": symbol,
+                "fid_input_date_1": date_from,
+                "fid_input_date_2": date_to,
             },
             db=db,
         )
@@ -253,13 +298,19 @@ class FinanceService:
             date = row.get("stck_bsop_date", "").strip()
             if not date:
                 continue
+            # 투자의견 코드를 한글로 변환
+            cur_code = row.get("invt_opnn_cls_code", "").strip()
+            prev_code = row.get("rgbf_invt_opnn_cls_code", "").strip()
+            opinion_text = _OPINION_CODE_MAP.get(cur_code, "")
+            if not opinion_text:
+                opinion_text = row.get("invt_opnn", "").strip()
             items.append(
                 InvestOpinionItem(
                     date=date,
                     firm=row.get("mbcr_name", "").strip(),
-                    opinion=row.get("invt_opnn", "").strip(),
-                    target_price=_safe_int(row.get("hts_goal_prc")) or None,
-                    change=row.get("invt_opnn_cls_code", "").strip() or None,
+                    opinion=opinion_text,
+                    target_price=_opt_int(row.get("hts_goal_prc")),
+                    change=_opinion_change(cur_code, prev_code),
                 )
             )
         await cache_set(cache_key, [i.model_dump() for i in items], 1800)
