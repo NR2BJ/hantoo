@@ -188,14 +188,20 @@ export default function MarketPage() {
 
 /* ─── Ranking Sections ─── */
 
+function UnsupportedMarket({ label }: { label: string }) {
+  return <p className="text-sm text-[var(--muted-foreground)]">{label}: KIS API에서 코스닥 조회 미지원</p>;
+}
+
 function VolumeRankSection({ market }: { market: string }) {
   const { data, isLoading, error } = useVolumeRank(market);
+  if (market === "Q") return <UnsupportedMarket label="거래량 순위" />;
   return <RankTable data={data} loading={isLoading} error={error} label="거래량 순위" />;
 }
 
 function FluctuationSection({ market }: { market: string }) {
   const [sort, setSort] = useState("1"); // 1=상승, 2=하락
   const { data, isLoading, error } = useFluctuation(market, sort);
+  if (market === "Q") return <UnsupportedMarket label="등락률 순위" />;
   return (
     <div>
       <div className="flex gap-2 mb-2">
@@ -209,17 +215,20 @@ function FluctuationSection({ market }: { market: string }) {
 
 function MarketCapSection({ market }: { market: string }) {
   const { data, isLoading, error } = useMarketCapRank(market);
+  if (market === "Q") return <UnsupportedMarket label="시가총액 순위" />;
   return <RankTable data={data} loading={isLoading} error={error} label="시가총액 순위" />;
 }
 
 function InterestSection({ market }: { market: string }) {
   const { data, isLoading, error } = useTopInterest(market);
+  if (market === "Q") return <UnsupportedMarket label="관심종목 순위" />;
   return <RankTable data={data} loading={isLoading} error={error} label="관심종목 순위" />;
 }
 
 function HighLowSection({ market }: { market: string }) {
   const [sort, setSort] = useState("1");
   const { data, isLoading, error } = useNearHighLow(market, sort);
+  if (market === "Q") return <UnsupportedMarket label="52주 신고/저가" />;
   return (
     <div>
       <div className="flex gap-2 mb-2">

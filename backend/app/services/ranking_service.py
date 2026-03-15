@@ -60,6 +60,7 @@ class RankingService:
     """Ranking & market info queries via KIS API."""
 
     # ---- 거래량 순위 ----
+    # Valid market codes: J, NX, UN, W (Q not supported)
     async def get_volume_rank(
         self,
         account: KISAccount,
@@ -67,6 +68,9 @@ class RankingService:
         *,
         market: str = "J",
     ) -> list[RankItem]:
+        if market not in ("J", "NX", "UN", "W"):
+            logger.info("volume-rank: market=%s not supported, returning empty", market)
+            return []
         cache_key = f"kis:{account.environment}:ranking:volume:{market}"
         cached = await cache_get(cache_key)
         if cached:
@@ -97,8 +101,7 @@ class RankingService:
         return items
 
     # ---- 등락률 순위 ----
-    # Reference: examples_llm/domestic_stock/fluctuation/fluctuation.py
-    # All params lowercase, needs fid_input_cnt_1, fid_prc_cls_code, fid_rsfl_rate1/2
+    # Docs say J, W, Q valid but Q returns error in practice
     async def get_fluctuation(
         self,
         account: KISAccount,
@@ -107,6 +110,9 @@ class RankingService:
         market: str = "J",
         sort: str = "1",  # 1=상승, 2=하락
     ) -> list[RankItem]:
+        if market not in ("J", "W"):
+            logger.info("fluctuation: market=%s not supported, returning empty", market)
+            return []
         cache_key = f"kis:{account.environment}:ranking:fluctuation:{market}:{sort}"
         cached = await cache_get(cache_key)
         if cached:
@@ -140,6 +146,7 @@ class RankingService:
         return items
 
     # ---- 시가총액 순위 ----
+    # Valid market codes: J only
     async def get_market_cap(
         self,
         account: KISAccount,
@@ -147,6 +154,9 @@ class RankingService:
         *,
         market: str = "J",
     ) -> list[RankItem]:
+        if market != "J":
+            logger.info("market-cap: market=%s not supported (J only), returning empty", market)
+            return []
         cache_key = f"kis:{account.environment}:ranking:marketcap:{market}"
         cached = await cache_get(cache_key)
         if cached:
@@ -175,6 +185,7 @@ class RankingService:
         return items
 
     # ---- 인기종목 (관심도) ----
+    # Valid market codes: J only
     async def get_top_interest(
         self,
         account: KISAccount,
@@ -182,6 +193,9 @@ class RankingService:
         *,
         market: str = "J",
     ) -> list[RankItem]:
+        if market != "J":
+            logger.info("top-interest: market=%s not supported (J only), returning empty", market)
+            return []
         cache_key = f"kis:{account.environment}:ranking:interest:{market}"
         cached = await cache_get(cache_key)
         if cached:
@@ -212,9 +226,7 @@ class RankingService:
         return items
 
     # ---- 신고가/신저가 근접 ----
-    # Reference: examples_llm/domestic_stock/near_new_highlow/near_new_highlow.py
-    # Uses fid_prc_cls_code for sort: 0=신고근접, 1=신저근접
-    # All params lowercase
+    # Valid market codes: J only
     async def get_near_highlow(
         self,
         account: KISAccount,
@@ -223,6 +235,9 @@ class RankingService:
         market: str = "J",
         sort: str = "1",  # 1=신고가, 2=신저가
     ) -> list[RankItem]:
+        if market != "J":
+            logger.info("near-highlow: market=%s not supported (J only), returning empty", market)
+            return []
         cache_key = f"kis:{account.environment}:ranking:highlow:{market}:{sort}"
         cached = await cache_get(cache_key)
         if cached:
