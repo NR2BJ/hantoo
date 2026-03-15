@@ -182,6 +182,30 @@ export interface OverseasHolding {
   exchange_rate: number;
 }
 
+// ── Ranking Types ──
+
+export interface RankItem {
+  rank: number;
+  symbol: string;
+  name: string;
+  current_price: number;
+  change: number;
+  change_rate: number;
+  change_sign: string; // 1=상한 2=상승 3=보합 4=하한 5=하락
+  volume: number;
+  trade_amount: number;
+}
+
+export interface InvestorItem {
+  investor: string;
+  buy_volume: number;
+  sell_volume: number;
+  net_volume: number;
+  buy_amount: number;
+  sell_amount: number;
+  net_amount: number;
+}
+
 // Color helpers for Korean market convention
 export function getPriceColor(changeSign: string): string {
   // 1=상한, 2=상승 → red, 4=하한, 5=하락 → blue, 3=보합 → gray

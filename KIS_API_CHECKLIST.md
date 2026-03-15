@@ -138,11 +138,11 @@
 
 | 상태 | 함수명 | API Path | tr_id | 설명 |
 |------|--------|----------|-------|------|
-| 🔲 | volume_rank | `/uapi/domestic-stock/v1/quotations/volume-rank` | `FHPST01710000` | 거래량 순위 |
-| 🔲 | fluctuation | `/uapi/domestic-stock/v1/ranking/fluctuation` | `FHPST01700000` | 등락률 순위 |
-| 🔲 | market_cap | `/uapi/domestic-stock/v1/ranking/market-cap` | `FHPST01740000` | 시가총액 순위 |
-| 🔲 | top_interest_stock | `/uapi/domestic-stock/v1/ranking/top-interest-stock` | `FHPST01800000` | 인기종목 (관심도) |
-| 🔲 | near_new_highlow | `/uapi/domestic-stock/v1/ranking/near-new-highlow` | `FHPST01870000` | 신고가/신저가 근접 |
+| ✅ | volume_rank | `/uapi/domestic-stock/v1/quotations/volume-rank` | `FHPST01710000` | 거래량 순위 | `ranking_service.py` |
+| ✅ | fluctuation | `/uapi/domestic-stock/v1/ranking/fluctuation` | `FHPST01700000` | 등락률 순위 | `ranking_service.py` |
+| ✅ | market_cap | `/uapi/domestic-stock/v1/ranking/market-cap` | `FHPST01740000` | 시가총액 순위 | `ranking_service.py` |
+| ✅ | top_interest_stock | `/uapi/domestic-stock/v1/ranking/top-interest-stock` | `FHPST01800000` | 인기종목 (관심도) | `ranking_service.py` |
+| ✅ | near_new_highlow | `/uapi/domestic-stock/v1/ranking/near-new-highlow` | `FHPST01870000` | 신고가/신저가 근접 | `ranking_service.py` |
 | 🔲 | capture_uplowprice | `/uapi/domestic-stock/v1/quotations/capture-uplowprice` | `FHKST130000C0` | 상한가/하한가 포착 |
 | 🔲 | inquire_vi_status | `/uapi/domestic-stock/v1/quotations/inquire-vi-status` | `FHPST01390000` | VI 발동 현황 |
 | ⬜ | disparity | — | — | 이격도 |
@@ -182,8 +182,8 @@
 
 | 상태 | 함수명 | API Path | tr_id | 설명 |
 |------|--------|----------|-------|------|
-| 🔲 | inquire_investor | `/uapi/domestic-stock/v1/quotations/inquire-investor` | `FHKST01010900` | 종목별 투자자 매매동향 |
-| 🔲 | foreign_institution_total | `/uapi/domestic-stock/v1/quotations/foreign-institution-total` | `FHPTJ04400000` | 외국인/기관 합산 |
+| ✅ | inquire_investor | `/uapi/domestic-stock/v1/quotations/inquire-investor` | `FHKST01010900` | 종목별 투자자 매매동향 | `ranking_service.py` |
+| ✅ | foreign_institution_total | `/uapi/domestic-stock/v1/quotations/foreign-institution-total` | `FHPTJ04400000` | 외국인/기관 합산 | `ranking_service.py` |
 | ⬜ | inquire_investor_daily_by_market | — | — | 시장별 일별 투자자 |
 | ⬜ | inquire_investor_time_by_market | — | — | 시장별 시간별 투자자 |
 | ⬜ | investor_trade_by_stock_daily | — | — | 종목별 일별 투자자 매매 |
@@ -495,9 +495,9 @@
 | 인증 | 2 | 0 | 1 | 3 |
 | 국내주식 시세 | 6 | 4 | ~35 | ~45 |
 | 국내주식 주문/잔고 | 8 | 3 | ~15 | ~26 |
-| 국내주식 랭킹 | 0 | 7 | ~11 | ~18 |
+| 국내주식 랭킹 | **5** | 2 | ~11 | ~18 |
 | 국내주식 재무 | 0 | 5 | 5 | 10 |
-| 국내주식 투자자/프로그램 | 0 | 2 | ~25 | ~27 |
+| 국내주식 투자자/프로그램 | **2** | 0 | ~25 | ~27 |
 | 국내주식 기업/KSD | 0 | 3 | ~12 | ~15 |
 | 해외주식 시세 | 0 | 10 | ~15 | ~25 |
 | 해외주식 주문/잔고 | 1 | 6 | ~25 | ~32 |
@@ -507,25 +507,31 @@
 | ETF/ETN | 0 | 0 | 6 | 6 |
 | ELW | 0 | 0 | 24 | 24 |
 | WebSocket | 0 | 0 | 6 | 6 |
-| **합계** | **17** | **~40** | **~276** | **~333** |
+| **합계** | **24** | **~33** | **~276** | **~333** |
 
 ---
 
 ## Phase별 구현 로드맵
 
-### Phase 5 (AI 어시스턴트) — 추가 데이터 소스
-- 🔲 재무제표 (income_statement, balance_sheet, financial_ratio)
-- 🔲 실적추정 (estimate_perform), 투자의견 (invest_opinion)
-- 🔲 뉴스 (news_title)
-- 🔲 배당정보 (ksdinfo_dividend, dividend_rate)
+### Phase 5 (랭킹/시장정보) ✅ 완료
+- ✅ 국내 랭킹 (volume_rank, fluctuation, market_cap, top_interest_stock, near_new_highlow)
+- ✅ 투자자 매매동향 (inquire_investor, foreign_institution_total)
 
-### Phase 7 (Polish) — 시장 기능 확장
-- 🔲 국내 랭킹 (volume_rank, fluctuation, market_cap, top_interest_stock, near_new_highlow)
-- 🔲 VI 발동 (inquire_vi_status), 상하한가 (capture_uplowprice)
-- 🔲 투자자 매매동향 (inquire_investor, foreign_institution_total)
+### Phase 6 (해외주식)
 - 🔲 해외주식 시세/주문 (price, dailyprice, order US)
+- 🔲 해외 체결/미체결 (inquire_ccnl, inquire_nccs)
+
+### Phase 7 (Polish/UI) — 시장 기능 확장
+- 🔲 대시보드 랭킹 카드 UI (거래량/등락률/인기종목)
+- 🔲 VI 발동 (inquire_vi_status), 상하한가 (capture_uplowprice)
+- 🔲 재무제표/뉴스/배당 (AI 활용 데이터)
 - 🔲 WebSocket 실시간 (H0STCNT0, H0STASP0)
 - 🔲 휴장일 확인 (chk_holiday)
+- 🔲 모바일 반응형
+
+### Phase 8 (AI) — 최후반
+- 🔲 AI 어시스턴트 (Claude/OpenAI)
+- 🔲 AI 자동매매
 
 ### 미정 (필요 시)
 - ⬜ 채권, 선물옵션, ELW — 가족용 플랫폼에서는 우선순위 낮음
