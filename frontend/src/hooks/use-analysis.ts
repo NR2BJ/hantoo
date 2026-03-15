@@ -128,6 +128,7 @@ export function useNews(symbol: string) {
       }),
     enabled: !!accountId && !!symbol,
     refetchInterval: 60_000, // 1분
+    refetchIntervalInBackground: false,
     staleTime: 30_000,
   });
 }

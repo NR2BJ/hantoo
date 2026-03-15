@@ -19,6 +19,7 @@ export function useVolumeRank(market = "J") {
       }),
     enabled: !!accountId,
     refetchInterval: 30000,
+    refetchIntervalInBackground: false,
     staleTime: 10000,
   });
 }
@@ -33,6 +34,7 @@ export function useFluctuation(market = "J", sort = "1") {
       }),
     enabled: !!accountId,
     refetchInterval: 30000,
+    refetchIntervalInBackground: false,
     staleTime: 10000,
   });
 }
@@ -47,6 +49,7 @@ export function useMarketCapRank(market = "J") {
       }),
     enabled: !!accountId,
     refetchInterval: 30000,
+    refetchIntervalInBackground: false,
     staleTime: 10000,
   });
 }
@@ -61,6 +64,7 @@ export function useTopInterest(market = "J") {
       }),
     enabled: !!accountId,
     refetchInterval: 30000,
+    refetchIntervalInBackground: false,
     staleTime: 10000,
   });
 }
@@ -75,6 +79,7 @@ export function useNearHighLow(market = "J", sort = "1") {
       }),
     enabled: !!accountId,
     refetchInterval: 30000,
+    refetchIntervalInBackground: false,
     staleTime: 10000,
   });
 }
@@ -89,6 +94,7 @@ export function useInvestor(symbol: string) {
       }),
     enabled: !!accountId && !!symbol,
     refetchInterval: 30000,
+    refetchIntervalInBackground: false,
     staleTime: 10000,
   });
 }
@@ -103,6 +109,7 @@ export function useForeignInstitution(market = "J") {
       }),
     enabled: !!accountId,
     refetchInterval: 30000,
+    refetchIntervalInBackground: false,
     staleTime: 10000,
   });
 }
