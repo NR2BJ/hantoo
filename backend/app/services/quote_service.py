@@ -59,6 +59,8 @@ class QuoteService:
             db=db,
         )
         out = data.get("output", {})
+        logger.info("KIS quote raw for %s: name=%s, price=%s, vol=%s",
+                     symbol, out.get("hts_kor_isnm"), out.get("stck_prpr"), out.get("acml_vol"))
 
         quote = StockQuote(
             symbol=symbol,

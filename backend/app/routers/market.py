@@ -41,8 +41,8 @@ async def get_quote(
         return StockQuote(symbol=symbol, name=symbol, current_price=0, change=0,
                           change_rate=0.0, change_sign="3", open_price=0, high_price=0,
                           low_price=0, volume=0, trade_amount=0, prev_close=0, market_cap=0)
-    except Exception as e:
-        logger.warning("Failed to get quote for %s: %s", symbol, e)
+    except Exception:
+        logger.exception("Failed to get quote for %s", symbol)
         return StockQuote(symbol=symbol, name=symbol, current_price=0, change=0,
                           change_rate=0.0, change_sign="3", open_price=0, high_price=0,
                           low_price=0, volume=0, trade_amount=0, prev_close=0, market_cap=0)
@@ -62,8 +62,8 @@ async def get_candles(
     except KISApiError as e:
         logger.info("KIS API error for candles %s: %s", symbol, e.msg)
         return []
-    except Exception as e:
-        logger.warning("Failed to get candles for %s: %s", symbol, e)
+    except Exception:
+        logger.exception("Failed to get candles for %s", symbol)
         return []
 
 
@@ -80,8 +80,8 @@ async def get_minute_candles(
     except KISApiError as e:
         logger.info("KIS API error for minute candles %s: %s", symbol, e.msg)
         return []
-    except Exception as e:
-        logger.warning("Failed to get minute candles for %s: %s", symbol, e)
+    except Exception:
+        logger.exception("Failed to get minute candles for %s", symbol)
         return []
 
 
@@ -99,8 +99,8 @@ async def get_orderbook(
         return Orderbook(symbol=symbol, ask=[OrderbookEntry(price=0, volume=0)] * 10,
                          bid=[OrderbookEntry(price=0, volume=0)] * 10,
                          total_ask_volume=0, total_bid_volume=0)
-    except Exception as e:
-        logger.warning("Failed to get orderbook for %s: %s", symbol, e)
+    except Exception:
+        logger.exception("Failed to get orderbook for %s", symbol)
         return Orderbook(symbol=symbol, ask=[OrderbookEntry(price=0, volume=0)] * 10,
                          bid=[OrderbookEntry(price=0, volume=0)] * 10,
                          total_ask_volume=0, total_bid_volume=0)
@@ -118,8 +118,8 @@ async def get_trades(
     except KISApiError as e:
         logger.info("KIS API error for trades %s: %s", symbol, e.msg)
         return []
-    except Exception as e:
-        logger.warning("Failed to get trades for %s: %s", symbol, e)
+    except Exception:
+        logger.exception("Failed to get trades for %s", symbol)
         return []
 
 

@@ -77,6 +77,45 @@ def create_app() -> FastAPI:
     async def health():
         return {"status": "ok", "setup_completed": app_settings.setup_completed}
 
+    @app.get("/api/debug/test-quote")
+    async def debug_test_quote(symbol: str = "005930"):
+        """Diagnostic: test KIS API quote call and return raw data or error details."""
+        from app.database import async_session as _session
+        from app.models.kis_account import KISAccount
+        from app.services.kis_client import KISApiError, kis_client
+        from sqlalchemy import select
+
+        async with _session() as db:
+            result = await db.execute(
+                select(KISAccount).where(KISAccount.is_active == True).limit(1)  # noqa: E712
+            )
+            account = result.scalar_one_or_none()
+            if not account:
+                return {"error": "No active KIS account found"}
+
+            try:
+                data = await kis_client.request(
+                    account, "GET",
+                    "/uapi/domestic-stock/v1/quotations/inquire-price",
+                    tr_id="FHKST01010100",
+                    params={"FID_COND_MRKT_DIV_CODE": "J", "FID_INPUT_ISCD": symbol},
+                    db=db,
+                )
+                out = data.get("output", {})
+                return {
+                    "status": "ok",
+                    "rt_cd": data.get("rt_cd"),
+                    "symbol": symbol,
+                    "name": out.get("hts_kor_isnm"),
+                    "price": out.get("stck_prpr"),
+                    "volume": out.get("acml_vol"),
+                    "raw_keys": list(out.keys())[:20],
+                }
+            except KISApiError as e:
+                return {"status": "kis_error", "rt_cd": e.rt_cd, "msg_cd": e.msg_cd, "msg": e.msg}
+            except Exception as e:
+                return {"status": "exception", "type": type(e).__name__, "msg": str(e)}
+
     @app.post("/api/cache/flush")
     async def flush_cache(symbol: str = "", scope: str = ""):
         """Flush Redis cache. Optional: symbol=005930 or scope=ranking."""
