@@ -1,6 +1,5 @@
 """Overseas stock quote service — price, candles, search via KIS API."""
 
-import asyncio
 import logging
 
 from app.models.kis_account import KISAccount
@@ -157,72 +156,18 @@ class OverseasQuoteService:
         query: str,
         db,
     ) -> list[OverseasSearchResult]:
-        """해외종목 검색 (HHDFS76410000) — NAS/NYS/AMS 3개 거래소 병렬 조회."""
-        cache_key = f"kis:overseas:search:{query.upper()}"
-        cached = await cache_get(cache_key)
-        if cached:
-            return [OverseasSearchResult(**r) for r in cached]
+        """해외종목 검색 — KIS 마스터 파일 기반 로컬 텍스트 검색."""
+        from app.services.overseas_master import search_master
 
-        exchanges = ["NAS", "NYS", "AMS"]
-
-        async def _search_one(excd: str) -> list[OverseasSearchResult]:
-            try:
-                data = await kis_client.request(
-                    account,
-                    "GET",
-                    "/uapi/overseas-price/v1/quotations/inquire-search",
-                    tr_id="HHDFS76410000",
-                    params={
-                        "AUTH": "",
-                        "EXCD": excd,
-                        "CO_YN_PRCR": "",
-                        "OS_YN_PRCR": "",
-                        "FND_COND": query.upper(),
-                    },
-                    db=db,
-                )
-                results = []
-                for item in data.get("output2", []):
-                    sym = item.get("symb", "").strip()
-                    name = item.get("name", "").strip()
-                    if sym:
-                        results.append(
-                            OverseasSearchResult(
-                                symbol=sym,
-                                name=name,
-                                exchange=excd,
-                            )
-                        )
-                return results
-            except Exception as e:
-                logger.warning("Overseas search failed for %s: %s", excd, e)
-                return []
-
-        all_results = await asyncio.gather(*[_search_one(ex) for ex in exchanges])
-        merged = []
-        for results in all_results:
-            merged.extend(results)
-
-        # Sort by relevance: exact symbol > prefix > contains > rest
-        q_upper = query.upper()
-
-        def _relevance(r: OverseasSearchResult) -> tuple[int, str]:
-            sym = r.symbol.upper()
-            if sym == q_upper:
-                return (0, sym)          # exact match
-            if sym.startswith(q_upper):
-                return (1, sym)          # prefix match
-            if q_upper in sym:
-                return (2, sym)          # symbol contains query
-            if q_upper in r.name.upper():
-                return (3, sym)          # name contains query
-            return (4, sym)
-
-        merged.sort(key=_relevance)
-        merged = merged[:50]
-
-        await cache_set(cache_key, [r.model_dump() for r in merged], 30)
-        return merged
+        results = await search_master(query, limit=30)
+        return [
+            OverseasSearchResult(
+                symbol=r["symbol"],
+                name=r["name"],
+                exchange=r["exchange"],
+            )
+            for r in results
+        ]
 
 
 def _exchange_to_market_div(exchange: str) -> str:
