@@ -9,6 +9,9 @@ from app.database import Base, async_session, engine
 from app.services.redis_client import close_redis, init_redis
 from app.services.settings_service import app_settings
 
+# Configure app loggers to INFO so debug logs from services are visible
+logging.basicConfig(level=logging.INFO, format="%(levelname)s:%(name)s:%(message)s")
+
 logger = logging.getLogger(__name__)
 
 

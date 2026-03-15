@@ -34,8 +34,8 @@ async def get_income_statement(
     except KISApiError as e:
         raise HTTPException(400, f"KIS API error: {e.msg}")
     except Exception as e:
-        logger.error("Failed to get income statement for %s: %s", symbol, e)
-        raise HTTPException(500, "Failed to get income statement")
+        logger.warning("Failed to get income statement for %s: %s", symbol, e)
+        return []
 
 
 @router.get("/balance-sheet", response_model=list[BalanceSheetItem])
@@ -52,8 +52,8 @@ async def get_balance_sheet(
     except KISApiError as e:
         raise HTTPException(400, f"KIS API error: {e.msg}")
     except Exception as e:
-        logger.error("Failed to get balance sheet for %s: %s", symbol, e)
-        raise HTTPException(500, "Failed to get balance sheet")
+        logger.warning("Failed to get balance sheet for %s: %s", symbol, e)
+        return []
 
 
 @router.get("/financial-ratio", response_model=list[FinancialRatioItem])
@@ -70,8 +70,8 @@ async def get_financial_ratio(
     except KISApiError as e:
         raise HTTPException(400, f"KIS API error: {e.msg}")
     except Exception as e:
-        logger.error("Failed to get financial ratio for %s: %s", symbol, e)
-        raise HTTPException(500, "Failed to get financial ratio")
+        logger.warning("Failed to get financial ratio for %s: %s", symbol, e)
+        return []
 
 
 @router.get("/estimate", response_model=list[EstimateItem])
@@ -87,8 +87,8 @@ async def get_estimate(
     except KISApiError as e:
         raise HTTPException(400, f"KIS API error: {e.msg}")
     except Exception as e:
-        logger.error("Failed to get estimate for %s: %s", symbol, e)
-        raise HTTPException(500, "Failed to get estimate")
+        logger.warning("Failed to get estimate for %s: %s", symbol, e)
+        return []
 
 
 @router.get("/opinion", response_model=list[InvestOpinionItem])
@@ -104,5 +104,5 @@ async def get_invest_opinion(
     except KISApiError as e:
         raise HTTPException(400, f"KIS API error: {e.msg}")
     except Exception as e:
-        logger.error("Failed to get invest opinion for %s: %s", symbol, e)
-        raise HTTPException(500, "Failed to get invest opinion")
+        logger.warning("Failed to get invest opinion for %s: %s", symbol, e)
+        return []

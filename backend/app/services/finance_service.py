@@ -147,18 +147,22 @@ class FinanceService:
         if cached:
             return [BalanceSheetItem(**item) for item in cached]
 
-        data = await kis_client.request(
-            account,
-            "GET",
-            "/uapi/domestic-stock/v1/finance/balance-sheet",
-            tr_id="FHKST66430100",
-            params={
-                "FID_DIV_CLS_CODE": "0" if period == "A" else "1",
-                "fid_cond_mrkt_div_code": "J",
-                "fid_input_iscd": symbol,
-            },
-            db=db,
-        )
+        try:
+            data = await kis_client.request(
+                account,
+                "GET",
+                "/uapi/domestic-stock/v1/finance/balance-sheet",
+                tr_id="FHKST66430100",
+                params={
+                    "FID_DIV_CLS_CODE": "0" if period == "A" else "1",
+                    "fid_cond_mrkt_div_code": "J",
+                    "fid_input_iscd": symbol,
+                },
+                db=db,
+            )
+        except Exception as e:
+            logger.warning("[balance_sheet] API failed for %s: %s — returning empty", symbol, e)
+            return []
 
         # 디버그
         logger.info("[balance_sheet] response keys: %s", list(data.keys()))
@@ -200,18 +204,22 @@ class FinanceService:
         if cached:
             return [FinancialRatioItem(**item) for item in cached]
 
-        data = await kis_client.request(
-            account,
-            "GET",
-            "/uapi/domestic-stock/v1/finance/financial-ratio",
-            tr_id="FHKST66430300",
-            params={
-                "FID_DIV_CLS_CODE": "0" if period == "A" else "1",
-                "fid_cond_mrkt_div_code": "J",
-                "fid_input_iscd": symbol,
-            },
-            db=db,
-        )
+        try:
+            data = await kis_client.request(
+                account,
+                "GET",
+                "/uapi/domestic-stock/v1/finance/financial-ratio",
+                tr_id="FHKST66430300",
+                params={
+                    "FID_DIV_CLS_CODE": "0" if period == "A" else "1",
+                    "fid_cond_mrkt_div_code": "J",
+                    "fid_input_iscd": symbol,
+                },
+                db=db,
+            )
+        except Exception as e:
+            logger.warning("[financial_ratio] API failed for %s: %s — returning empty", symbol, e)
+            return []
 
         # 디버그
         logger.info("[financial_ratio] response keys: %s", list(data.keys()))

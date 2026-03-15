@@ -32,8 +32,8 @@ async def get_dividend(
     except KISApiError as e:
         raise HTTPException(400, f"KIS API error: {e.msg}")
     except Exception as e:
-        logger.error("Failed to get dividend for %s: %s", symbol, e)
-        raise HTTPException(500, "Failed to get dividend info")
+        logger.warning("Failed to get dividend for %s: %s", symbol, e)
+        return []
 
 
 @router.get("/dividend-rate", response_model=list[DividendRankItem])
@@ -49,8 +49,8 @@ async def get_dividend_rate_ranking(
     except KISApiError as e:
         raise HTTPException(400, f"KIS API error: {e.msg}")
     except Exception as e:
-        logger.error("Failed to get dividend rate ranking: %s", e)
-        raise HTTPException(500, "Failed to get dividend rate ranking")
+        logger.warning("Failed to get dividend rate ranking: %s", e)
+        return []
 
 
 @router.get("/news", response_model=list[NewsItem])
@@ -66,8 +66,8 @@ async def get_news(
     except KISApiError as e:
         raise HTTPException(400, f"KIS API error: {e.msg}")
     except Exception as e:
-        logger.error("Failed to get news for %s: %s", symbol, e)
-        raise HTTPException(500, "Failed to get news")
+        logger.warning("Failed to get news for %s: %s", symbol, e)
+        return []
 
 
 @router.get("/stock-info", response_model=StockInfoDetail)
@@ -83,5 +83,9 @@ async def get_stock_info(
     except KISApiError as e:
         raise HTTPException(400, f"KIS API error: {e.msg}")
     except Exception as e:
-        logger.error("Failed to get stock info for %s: %s", symbol, e)
-        raise HTTPException(500, "Failed to get stock info")
+        logger.warning("Failed to get stock info for %s: %s", symbol, e)
+        return StockInfoDetail(
+            symbol=symbol, name=symbol, market="", sector=None,
+            listing_date=None, face_value=None,
+            shares_outstanding=None, capital=None,
+        )

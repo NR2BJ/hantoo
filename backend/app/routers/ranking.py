@@ -27,8 +27,8 @@ async def get_volume_rank(
     except KISApiError as e:
         raise HTTPException(400, f"KIS API error: {e.msg}")
     except Exception as e:
-        logger.error("Failed to get volume rank: %s", e)
-        raise HTTPException(500, "Failed to get volume rank")
+        logger.warning("Failed to get volume rank: %s", e)
+        return []
 
 
 @router.get("/fluctuation", response_model=list[RankItem])
@@ -45,8 +45,8 @@ async def get_fluctuation(
     except KISApiError as e:
         raise HTTPException(400, f"KIS API error: {e.msg}")
     except Exception as e:
-        logger.error("Failed to get fluctuation: %s", e)
-        raise HTTPException(500, "Failed to get fluctuation rank")
+        logger.warning("Failed to get fluctuation: %s", e)
+        return []
 
 
 @router.get("/market-cap", response_model=list[RankItem])
@@ -62,8 +62,8 @@ async def get_market_cap(
     except KISApiError as e:
         raise HTTPException(400, f"KIS API error: {e.msg}")
     except Exception as e:
-        logger.error("Failed to get market cap rank: %s", e)
-        raise HTTPException(500, "Failed to get market cap rank")
+        logger.warning("Failed to get market cap rank: %s", e)
+        return []
 
 
 @router.get("/interest", response_model=list[RankItem])
@@ -79,8 +79,8 @@ async def get_top_interest(
     except KISApiError as e:
         raise HTTPException(400, f"KIS API error: {e.msg}")
     except Exception as e:
-        logger.error("Failed to get top interest: %s", e)
-        raise HTTPException(500, "Failed to get top interest rank")
+        logger.warning("Failed to get top interest: %s", e)
+        return []
 
 
 @router.get("/highlow", response_model=list[RankItem])
@@ -97,8 +97,8 @@ async def get_near_highlow(
     except KISApiError as e:
         raise HTTPException(400, f"KIS API error: {e.msg}")
     except Exception as e:
-        logger.error("Failed to get highlow rank: %s", e)
-        raise HTTPException(500, "Failed to get highlow rank")
+        logger.warning("Failed to get highlow rank: %s", e)
+        return []
 
 
 @router.get("/investor", response_model=list[InvestorItem])
@@ -114,8 +114,8 @@ async def get_investor(
     except KISApiError as e:
         raise HTTPException(400, f"KIS API error: {e.msg}")
     except Exception as e:
-        logger.error("Failed to get investor data: %s", e)
-        raise HTTPException(500, "Failed to get investor data")
+        logger.warning("Failed to get investor data: %s", e)
+        return []
 
 
 @router.get("/foreign", response_model=list[RankItem])
@@ -131,5 +131,5 @@ async def get_foreign_institution(
     except KISApiError as e:
         raise HTTPException(400, f"KIS API error: {e.msg}")
     except Exception as e:
-        logger.error("Failed to get foreign institution data: %s", e)
-        raise HTTPException(500, "Failed to get foreign institution data")
+        logger.warning("Failed to get foreign institution data: %s", e)
+        return []

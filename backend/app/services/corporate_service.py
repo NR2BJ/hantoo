@@ -282,6 +282,7 @@ class CorporateService:
         if cached:
             return StockInfoDetail(**cached)
 
+        data: dict = {}
         # Try CTPF1002R (search-stock-info) first — has many more fields
         try:
             data = await kis_client.request(
@@ -298,17 +299,26 @@ class CorporateService:
         except Exception as e:
             logger.warning("[stock_info] CTPF1002R failed for %s: %s, trying CTPF1604R", symbol, e)
             # Fallback to CTPF1604R
-            data = await kis_client.request(
-                account,
-                "GET",
-                "/uapi/domestic-stock/v1/quotations/search-info",
-                tr_id="CTPF1604R",
-                params={
-                    "PDNO": symbol,
-                    "PRDT_TYPE_CD": "300",
-                },
-                db=db,
-            )
+            try:
+                data = await kis_client.request(
+                    account,
+                    "GET",
+                    "/uapi/domestic-stock/v1/quotations/search-info",
+                    tr_id="CTPF1604R",
+                    params={
+                        "PDNO": symbol,
+                        "PRDT_TYPE_CD": "300",
+                    },
+                    db=db,
+                )
+            except Exception as e2:
+                logger.warning("[stock_info] CTPF1604R also failed for %s: %s — returning minimal info", symbol, e2)
+                # VTS server may not support these APIs — return minimal data
+                return StockInfoDetail(
+                    symbol=symbol, name=symbol, market="", sector=None,
+                    listing_date=None, face_value=None,
+                    shares_outstanding=None, capital=None,
+                )
 
         output = data.get("output", {})
         if isinstance(output, list) and len(output) > 0:
