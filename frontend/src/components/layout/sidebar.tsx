@@ -18,6 +18,7 @@ const navItems = [
   { label: "주문내역", href: "/orders", icon: "📋" },
   { label: "AI 어시스턴트", href: "/ai", icon: "🤖" },
   { label: "AI 전략", href: "/ai/strategies", icon: "🧠" },
+  { label: "KIS 계좌", href: "/settings/accounts", icon: "🔑" },
   { label: "설정", href: "/settings", icon: "⚙️" },
 ];
 
