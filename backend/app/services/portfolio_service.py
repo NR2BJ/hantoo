@@ -391,9 +391,12 @@ class PortfolioService:
             db=db,
         )
 
-        # output1: per-holding items
+        # output1: per-holding items — only count items with actual quantity
         holdings_data = data.get("output1", [])
-        holding_count = len(holdings_data)
+        holding_count = sum(
+            1 for item in holdings_data
+            if _safe_int(item.get("hldg_qty", item.get("cblc_qty13", 0))) > 0
+        )
 
         # output2: summary (list with one item, or dict)
         summary = data.get("output2", [{}])
