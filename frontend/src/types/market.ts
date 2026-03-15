@@ -206,11 +206,115 @@ export interface InvestorItem {
   net_amount: number;
 }
 
+// ── Overseas Types ──
+
+export interface OverseasQuote {
+  symbol: string;
+  name: string;
+  exchange: string; // NAS, NYS, AMS
+  current_price: number; // USD
+  change: number;
+  change_rate: number;
+  change_sign: string;
+  open_price: number;
+  high_price: number;
+  low_price: number;
+  volume: number;
+  prev_close: number;
+}
+
+export interface OverseasCandle {
+  date: string;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+}
+
+export interface OverseasSearchResult {
+  symbol: string;
+  name: string;
+  exchange: string;
+}
+
+export interface OverseasOrderCreate {
+  symbol: string;
+  exchange: string;
+  side: "buy" | "sell";
+  order_type: "limit" | "market";
+  quantity: number;
+  price?: number;
+}
+
+export interface OverseasOrderModify {
+  quantity: number;
+  price: number;
+}
+
+export interface OverseasOrderResponse {
+  id: string;
+  account_id: string;
+  symbol: string;
+  exchange: string;
+  side: string;
+  order_type: string;
+  quantity: number;
+  price: number | null;
+  status: string;
+  filled_quantity: number;
+  filled_price: number | null;
+  kis_order_id: string | null;
+  submitted_at: string | null;
+  created_at: string;
+}
+
+export interface OverseasFilledOrder {
+  order_id: string;
+  symbol: string;
+  name: string;
+  exchange: string;
+  side: string;
+  quantity: number;
+  price: number;
+  total_amount: number;
+  order_time: string;
+  filled_time: string;
+}
+
+export interface OverseasBuyableAmount {
+  orderable_cash_foreign: number;
+  orderable_qty: number;
+  exchange_rate: number;
+}
+
+// ── Helpers ──
+
+export function formatUSD(price: number): string {
+  return `$${price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+export function getExchangeLabel(exchange: string): string {
+  const labels: Record<string, string> = {
+    NAS: "NASDAQ",
+    NYS: "NYSE",
+    AMS: "AMEX",
+  };
+  return labels[exchange] || exchange;
+}
+
 // Color helpers for Korean market convention
 export function getPriceColor(changeSign: string): string {
   // 1=상한, 2=상승 → red, 4=하한, 5=하락 → blue, 3=보합 → gray
   if (changeSign === "1" || changeSign === "2") return "text-red-500";
   if (changeSign === "4" || changeSign === "5") return "text-blue-500";
+  return "text-gray-500";
+}
+
+// US market convention: green=up, red=down
+export function getUSPriceColor(changeSign: string): string {
+  if (changeSign === "1" || changeSign === "2") return "text-green-500";
+  if (changeSign === "4" || changeSign === "5") return "text-red-500";
   return "text-gray-500";
 }
 

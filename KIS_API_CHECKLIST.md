@@ -247,15 +247,15 @@
 
 | 상태 | 함수명 | API Path | tr_id | 설명 |
 |------|--------|----------|-------|------|
-| 🔲 | price | `/uapi/overseas-price/v1/quotations/price` | `HHDFS00000300` | 현재가 |
+| ✅ | price | `/uapi/overseas-price/v1/quotations/price` | `HHDFS00000300` | 현재가 |
 | 🔲 | dailyprice | `/uapi/overseas-price/v1/quotations/dailyprice` | `HHDFS76240000` | 일별 시세 |
 | 🔲 | asking_price | — | — | 호가 |
 | 🔲 | inquire_asking_price | — | — | 호가 상세 |
 | 🔲 | inquire_ccnl | — | — | 체결 내역 |
-| 🔲 | inquire_daily_chartprice | `/uapi/overseas-price/v1/quotations/inquire-daily-chartprice` | `FHKST03030100` | 일봉 차트 |
+| ✅ | inquire_daily_chartprice | `/uapi/overseas-price/v1/quotations/inquire-daily-chartprice` | `FHKST03030100` | 일봉 차트 |
 | 🔲 | inquire_time_itemchartprice | — | — | 분봉 차트 |
 | 🔲 | inquire_time_indexchartprice | — | — | 해외지수 차트 |
-| 🔲 | inquire_search | `/uapi/overseas-price/v1/quotations/inquire-search` | `HHDFS76410000` | 종목 검색 |
+| ✅ | inquire_search | `/uapi/overseas-price/v1/quotations/inquire-search` | `HHDFS76410000` | 종목 검색 |
 | ⬜ | price_detail | — | — | 종목 상세 |
 | ⬜ | price_fluct | — | — | 등락률 |
 | ⬜ | delayed_asking_price_asia | — | — | 아시아 지연 호가 |
@@ -288,8 +288,8 @@
 
 | 상태 | 함수명 | API Path | tr_id (실전/모의) | 설명 |
 |------|--------|----------|-------------------|------|
-| 🔲 | order (US buy) | `/uapi/overseas-stock/v1/trading/order` | `TTTT1002U` / `VTTT1002U` | 미국 매수 |
-| 🔲 | order (US sell) | 〃 | `TTTT1006U` / `VTTT1006U` | 미국 매도 |
+| ✅ | order (US buy) | `/uapi/overseas-stock/v1/trading/order` | `TTTT1002U` / `VTTT1002U` | 미국 매수 |
+| ✅ | order (US sell) | 〃 | `TTTT1006U` / `VTTT1006U` | 미국 매도 |
 | ⬜ | order (HK buy) | 〃 | `TTTS1002U` / `VTTS1002U` | 홍콩 매수 |
 | ⬜ | order (HK sell) | 〃 | `TTTS1001U` / `VTTS1001U` | 홍콩 매도 |
 | ⬜ | order (JP buy) | 〃 | `TTTS0308U` / `VTTS0308U` | 일본 매수 |
@@ -300,7 +300,7 @@
 | ⬜ | order (CN-SZ sell) | 〃 | `TTTS0304U` / `VTTS0304U` | 중국심천 매도 |
 | ⬜ | order (VN buy) | 〃 | `TTTS0311U` / `VTTS0311U` | 베트남 매수 |
 | ⬜ | order (VN sell) | 〃 | `TTTS0310U` / `VTTS0310U` | 베트남 매도 |
-| 🔲 | order_rvsecncl | `/uapi/overseas-stock/v1/trading/order-rvsecncl` | `TTTT1004U` / `VTTT1004U` | 해외 주문 정정/취소 |
+| ✅ | order_rvsecncl | `/uapi/overseas-stock/v1/trading/order-rvsecncl` | `TTTT1004U` / `VTTT1004U` | 해외 주문 정정/취소 |
 | ⬜ | daytime_order | — | — | 주간거래 주문 |
 | ⬜ | daytime_order_rvsecncl | — | — | 주간거래 정정/취소 |
 | ⬜ | order_resv | — | — | 해외 예약 주문 |
@@ -308,7 +308,7 @@
 | ⬜ | order_resv_list | — | — | 예약 주문 목록 |
 | 🔲 | inquire_balance | `/uapi/overseas-stock/v1/trading/inquire-balance` | `TTTS3012R` / `VTTS3012R` | 해외 보유잔고 |
 | ✅ | inquire_present_balance | `/uapi/overseas-stock/v1/trading/inquire-present-balance` | `CTRP6504R` | 해외 현재잔고 |
-| 🔲 | inquire_ccnl | `/uapi/overseas-stock/v1/trading/inquire-ccnl` | `TTTS3035R` / `VTTS3035R` | 해외 체결내역 |
+| ✅ | inquire_ccnl | `/uapi/overseas-stock/v1/trading/inquire-ccnl` | `TTTS3035R` / `VTTS3035R` | 해외 체결내역 |
 | ⬜ | inquire_nccs | — | — | 해외 미체결 |
 | 🔲 | inquire_period_profit | — | — | 해외 기간 수익률 |
 | ⬜ | inquire_period_trans | — | — | 해외 기간 거래내역 |
