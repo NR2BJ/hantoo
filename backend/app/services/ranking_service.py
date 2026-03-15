@@ -67,7 +67,7 @@ class RankingService:
         *,
         market: str = "J",
     ) -> list[RankItem]:
-        cache_key = f"kis:ranking:volume:{market}"
+        cache_key = f"kis:{account.environment}:ranking:volume:{market}"
         cached = await cache_get(cache_key)
         if cached:
             return [RankItem(**item) for item in cached]
@@ -107,7 +107,7 @@ class RankingService:
         market: str = "J",
         sort: str = "1",  # 1=상승, 2=하락
     ) -> list[RankItem]:
-        cache_key = f"kis:ranking:fluctuation:{market}:{sort}"
+        cache_key = f"kis:{account.environment}:ranking:fluctuation:{market}:{sort}"
         cached = await cache_get(cache_key)
         if cached:
             return [RankItem(**item) for item in cached]
@@ -147,7 +147,7 @@ class RankingService:
         *,
         market: str = "J",
     ) -> list[RankItem]:
-        cache_key = f"kis:ranking:marketcap:{market}"
+        cache_key = f"kis:{account.environment}:ranking:marketcap:{market}"
         cached = await cache_get(cache_key)
         if cached:
             return [RankItem(**item) for item in cached]
@@ -182,7 +182,7 @@ class RankingService:
         *,
         market: str = "J",
     ) -> list[RankItem]:
-        cache_key = f"kis:ranking:interest:{market}"
+        cache_key = f"kis:{account.environment}:ranking:interest:{market}"
         cached = await cache_get(cache_key)
         if cached:
             return [RankItem(**item) for item in cached]
@@ -223,7 +223,7 @@ class RankingService:
         market: str = "J",
         sort: str = "1",  # 1=신고가, 2=신저가
     ) -> list[RankItem]:
-        cache_key = f"kis:ranking:highlow:{market}:{sort}"
+        cache_key = f"kis:{account.environment}:ranking:highlow:{market}:{sort}"
         cached = await cache_get(cache_key)
         if cached:
             return [RankItem(**item) for item in cached]
@@ -265,7 +265,7 @@ class RankingService:
         symbol: str,
         db,
     ) -> list[InvestorItem]:
-        cache_key = f"kis:investor:{symbol}"
+        cache_key = f"kis:{account.environment}:investor:{symbol}"
         cached = await cache_get(cache_key)
         if cached:
             return [InvestorItem(**item) for item in cached]
@@ -333,7 +333,7 @@ class RankingService:
         *,
         market: str = "J",
     ) -> list[RankItem]:
-        cache_key = f"kis:ranking:foreign:{market}"
+        cache_key = f"kis:{account.environment}:ranking:foreign:{market}"
         cached = await cache_get(cache_key)
         if cached:
             return [RankItem(**item) for item in cached]

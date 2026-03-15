@@ -89,7 +89,7 @@ class FinanceService:
         *,
         period: str = "A",  # A=연간, Q=분기
     ) -> list[IncomeStatementItem]:
-        cache_key = f"kis:finance:income:{symbol}:{period}"
+        cache_key = f"kis:{account.environment}:finance:income:{symbol}:{period}"
         cached = await cache_get(cache_key)
         if cached:
             return [IncomeStatementItem(**item) for item in cached]
@@ -142,7 +142,7 @@ class FinanceService:
         *,
         period: str = "A",
     ) -> list[BalanceSheetItem]:
-        cache_key = f"kis:finance:balance:{symbol}:{period}"
+        cache_key = f"kis:{account.environment}:finance:balance:{symbol}:{period}"
         cached = await cache_get(cache_key)
         if cached:
             return [BalanceSheetItem(**item) for item in cached]
@@ -199,7 +199,7 @@ class FinanceService:
         *,
         period: str = "A",
     ) -> list[FinancialRatioItem]:
-        cache_key = f"kis:finance:ratio:{symbol}:{period}"
+        cache_key = f"kis:{account.environment}:finance:ratio:{symbol}:{period}"
         cached = await cache_get(cache_key)
         if cached:
             return [FinancialRatioItem(**item) for item in cached]
@@ -253,8 +253,12 @@ class FinanceService:
 
     # ── 실적추정치 ────────────────────────────────────────
     # Reference: examples_llm/domestic_stock/estimate_perform/estimate_perform.py
-    # Returns output1~output4 with generic fields: sht_cd, item_kor_nm, dt, data1~data5
-    # NOT the same fields as income-statement.
+    # API returns TRANSPOSED data:
+    #   output1 = metadata dict (sht_cd, item_kor_nm, name1, name2, ...)
+    #   output2 = list of metric rows, each with data1~data5 (columns = years)
+    #             Row order: 매출액, 영업이익, 세전이익, 당기순이익, EPS, BPS
+    #   output3 = list of ratio rows, each with data1~data5
+    #   output4 = list of year labels [{dt: "2023.12"}, {dt: "2024.12"}, ...]
 
     async def get_estimate(
         self,
@@ -262,7 +266,7 @@ class FinanceService:
         symbol: str,
         db,
     ) -> list[EstimateItem]:
-        cache_key = f"kis:finance:estimate:{symbol}"
+        cache_key = f"kis:{account.environment}:finance:estimate:{symbol}"
         cached = await cache_get(cache_key)
         if cached:
             return [EstimateItem(**item) for item in cached]
@@ -280,55 +284,52 @@ class FinanceService:
 
         # 디버그: 실제 응답 구조 파악
         logger.info("[estimate] response keys: %s", list(data.keys()))
-        for key in ["output", "output1", "output2", "output3", "output4"]:
+        for key in ["output1", "output2", "output3", "output4"]:
             val = data.get(key)
             if val:
                 if isinstance(val, list) and val:
                     logger.info("[estimate] %s has %d rows, first row keys: %s", key, len(val), list(val[0].keys()))
                     logger.info("[estimate] %s first row data: %s", key, dict(val[0]))
                 elif isinstance(val, dict):
-                    logger.info("[estimate] %s is dict with keys: %s", key, list(val.keys()))
+                    logger.info("[estimate] %s is dict with keys: %s, values: %s", key, list(val.keys()),
+                               {k: v for k, v in val.items() if k in ("name1", "name2", "item_kor_nm")})
 
         items: list[EstimateItem] = []
 
-        # output1을 먼저 시도 — 이 API는 output1~4를 반환
-        output = data.get("output1", data.get("output", []))
-        if not isinstance(output, list):
-            output = [output] if output else []
+        # output4 = year labels
+        output4 = data.get("output4", [])
+        if not isinstance(output4, list):
+            output4 = []
+        dates = [row.get("dt", "").strip() for row in output4 if row.get("dt")]
 
-        for row in output:
-            # 두 가지 필드 형식 시도:
-            # Format A (income-statement style): stac_yymm, sale_account, bsop_prti, thtr_ntin
-            # Format B (estimate-perform style): dt, data1~data5
-            period = (
-                row.get("stac_yymm", "").strip()
-                or row.get("dt", "").strip()
-            )
-            if not period:
-                continue
+        # output2 = metric rows (transposed: rows=metrics, data1-5=years)
+        # Row order: 매출액(0), 영업이익(1), 세전이익(2), 당기순이익(3), EPS(4), BPS(5)
+        output2 = data.get("output2", [])
+        if not isinstance(output2, list):
+            output2 = []
 
-            # Format A 시도
-            revenue = _opt_int(row.get("sale_account"))
-            op_profit = _opt_int(row.get("bsop_prti"))
-            net_income = _opt_int(row.get("thtr_ntin"))
-            eps = _opt_int(row.get("eps"))
+        logger.info("[estimate] dates=%s, output2 rows=%d", dates, len(output2))
 
-            # Format B fallback (data1~data5 순서는 API 마다 다를 수 있음)
-            if revenue is None and op_profit is None and net_income is None:
-                revenue = _opt_int(row.get("data1"))
-                op_profit = _opt_int(row.get("data2"))
-                net_income = _opt_int(row.get("data3"))
-                eps = _opt_int(row.get("data4"))
+        if dates and output2:
+            # For each year column (data1=first year, data2=second, etc.)
+            for col_idx, period in enumerate(dates):
+                data_key = f"data{col_idx + 1}"
+                revenue = _opt_int(output2[0].get(data_key)) if len(output2) > 0 else None
+                op_profit = _opt_int(output2[1].get(data_key)) if len(output2) > 1 else None
+                # Row 2 = 세전이익, Row 3 = 당기순이익 — use net income (row 3)
+                net_income = _opt_int(output2[3].get(data_key)) if len(output2) > 3 else None
+                eps = _opt_int(output2[4].get(data_key)) if len(output2) > 4 else None
 
-            items.append(
-                EstimateItem(
-                    period=period,
-                    revenue_est=revenue,
-                    op_profit_est=op_profit,
-                    net_income_est=net_income,
-                    eps_est=eps,
+                items.append(
+                    EstimateItem(
+                        period=period,
+                        revenue_est=revenue,
+                        op_profit_est=op_profit,
+                        net_income_est=net_income,
+                        eps_est=eps,
+                    )
                 )
-            )
+
         await cache_set(cache_key, [i.model_dump() for i in items], 1800)
         return items
 
@@ -340,7 +341,7 @@ class FinanceService:
         symbol: str,
         db,
     ) -> list[InvestOpinionItem]:
-        cache_key = f"kis:finance:opinion:{symbol}"
+        cache_key = f"kis:{account.environment}:finance:opinion:{symbol}"
         cached = await cache_get(cache_key)
         if cached:
             return [InvestOpinionItem(**item) for item in cached]

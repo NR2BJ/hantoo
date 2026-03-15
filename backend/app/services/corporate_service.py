@@ -61,7 +61,7 @@ class CorporateService:
         symbol: str,
         db,
     ) -> list[DividendItem]:
-        cache_key = f"kis:corp:dividend:{symbol}"
+        cache_key = f"kis:{account.environment}:corp:dividend:{symbol}"
         cached = await cache_get(cache_key)
         if cached:
             return [DividendItem(**item) for item in cached]
@@ -127,7 +127,7 @@ class CorporateService:
         *,
         market: str = "J",
     ) -> list[DividendRankItem]:
-        cache_key = f"kis:corp:divrate:{market}"
+        cache_key = f"kis:{account.environment}:corp:divrate:{market}"
         cached = await cache_get(cache_key)
         if cached:
             return [DividendRankItem(**item) for item in cached]
@@ -213,7 +213,7 @@ class CorporateService:
         symbol: str,
         db,
     ) -> list[NewsItem]:
-        cache_key = f"kis:corp:news:{symbol}"
+        cache_key = f"kis:{account.environment}:corp:news:{symbol}"
         cached = await cache_get(cache_key)
         if cached:
             return [NewsItem(**item) for item in cached]
@@ -277,7 +277,7 @@ class CorporateService:
         symbol: str,
         db,
     ) -> StockInfoDetail:
-        cache_key = f"kis:corp:info:{symbol}"
+        cache_key = f"kis:{account.environment}:corp:info:{symbol}"
         cached = await cache_get(cache_key)
         if cached:
             return StockInfoDetail(**cached)
