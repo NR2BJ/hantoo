@@ -44,7 +44,7 @@ async def _download_and_parse(market_code: str, exchange: str) -> list[dict]:
 
         with zipfile.ZipFile(io.BytesIO(resp.content)) as zf:
             # There should be exactly one .cod file inside
-            cod_names = [n for n in zf.namelist() if n.endswith(".cod")]
+            cod_names = [n for n in zf.namelist() if n.lower().endswith(".cod")]
             if not cod_names:
                 logger.warning("No .cod file in %s", url)
                 return []
