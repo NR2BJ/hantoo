@@ -288,6 +288,88 @@ export interface OverseasBuyableAmount {
   exchange_rate: number;
 }
 
+// ── Analysis Types (Phase 7) ──
+
+export interface IncomeStatementItem {
+  period: string;
+  revenue: number | null;
+  operating_profit: number | null;
+  net_income: number | null;
+  eps: number | null;
+}
+
+export interface BalanceSheetItem {
+  period: string;
+  total_assets: number | null;
+  total_liabilities: number | null;
+  total_equity: number | null;
+}
+
+export interface FinancialRatioItem {
+  period: string;
+  roe: number | null;
+  roa: number | null;
+  per: number | null;
+  pbr: number | null;
+  eps: number | null;
+  bps: number | null;
+  debt_ratio: number | null;
+  reserve_ratio: number | null;
+}
+
+export interface EstimateItem {
+  period: string;
+  revenue_est: number | null;
+  op_profit_est: number | null;
+  net_income_est: number | null;
+  eps_est: number | null;
+}
+
+export interface InvestOpinionItem {
+  date: string;
+  firm: string;
+  opinion: string;
+  target_price: number | null;
+  change: string | null;
+}
+
+export interface DividendItem {
+  year: string;
+  dps: number | null;
+  div_rate: number | null;
+  ex_date: string | null;
+  pay_date: string | null;
+  record_date: string | null;
+}
+
+export interface DividendRankItem {
+  rank: number;
+  symbol: string;
+  name: string;
+  div_rate: number;
+  current_price: number;
+  dps: number | null;
+}
+
+export interface NewsItem {
+  date: string;
+  time: string;
+  title: string;
+  source: string | null;
+  article_id: string | null;
+}
+
+export interface StockInfoDetail {
+  symbol: string;
+  name: string;
+  market: string;
+  sector: string | null;
+  listing_date: string | null;
+  face_value: number | null;
+  shares_outstanding: number | null;
+  capital: number | null;
+}
+
 // ── Helpers ──
 
 export function formatUSD(price: number): string {
