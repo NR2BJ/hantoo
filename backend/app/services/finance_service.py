@@ -1,6 +1,7 @@
 """Phase 7 — 재무제표 / 실적추정 / 투자의견 서비스."""
 
 import logging
+from datetime import datetime, timedelta
 
 from app.models.kis_account import KISAccount
 from app.schemas.analysis import (
@@ -48,15 +49,16 @@ class FinanceService:
         if cached:
             return [IncomeStatementItem(**item) for item in cached]
 
+        # KIS: FID_DIV_CLS_CODE "0"=연간, "1"=분기
         data = await kis_client.request(
             account,
             "GET",
             "/uapi/domestic-stock/v1/finance/income-statement",
             tr_id="FHKST66430200",
             params={
-                "FID_DIV_CLS_CODE": "1" if period == "A" else "0",
-                "FID_COND_MRKT_DIV_CODE": "J",
-                "FID_INPUT_ISCD": symbol,
+                "FID_DIV_CLS_CODE": "0" if period == "A" else "1",
+                "fid_cond_mrkt_div_code": "J",
+                "fid_input_iscd": symbol,
             },
             db=db,
         )
@@ -72,7 +74,7 @@ class FinanceService:
                     revenue=_safe_int(row.get("sale_account")) or None,
                     operating_profit=_safe_int(row.get("bsop_prti")) or None,
                     net_income=_safe_int(row.get("thtr_ntin")) or None,
-                    eps=_safe_int(row.get("eps")) or None,
+                    eps=None,  # EPS는 재무비율 API에서 제공
                 )
             )
         await cache_set(cache_key, [i.model_dump() for i in items], 3600)
@@ -99,9 +101,9 @@ class FinanceService:
             "/uapi/domestic-stock/v1/finance/balance-sheet",
             tr_id="FHKST66430100",
             params={
-                "FID_DIV_CLS_CODE": "1" if period == "A" else "0",
-                "FID_COND_MRKT_DIV_CODE": "J",
-                "FID_INPUT_ISCD": symbol,
+                "FID_DIV_CLS_CODE": "0" if period == "A" else "1",
+                "fid_cond_mrkt_div_code": "J",
+                "fid_input_iscd": symbol,
             },
             db=db,
         )
@@ -143,9 +145,9 @@ class FinanceService:
             "/uapi/domestic-stock/v1/finance/financial-ratio",
             tr_id="FHKST66430300",
             params={
-                "FID_DIV_CLS_CODE": "1" if period == "A" else "0",
-                "FID_COND_MRKT_DIV_CODE": "J",
-                "FID_INPUT_ISCD": symbol,
+                "FID_DIV_CLS_CODE": "0" if period == "A" else "1",
+                "fid_cond_mrkt_div_code": "J",
+                "fid_input_iscd": symbol,
             },
             db=db,
         )
@@ -226,6 +228,11 @@ class FinanceService:
         if cached:
             return [InvestOpinionItem(**item) for item in cached]
 
+        # 최근 6개월 투자의견 조회
+        now = datetime.now()
+        date_to = now.strftime("%Y%m%d")
+        date_from = (now - timedelta(days=180)).strftime("%Y%m%d")
+
         data = await kis_client.request(
             account,
             "GET",
@@ -233,7 +240,10 @@ class FinanceService:
             tr_id="FHKST663300C0",
             params={
                 "FID_COND_MRKT_DIV_CODE": "J",
+                "FID_COND_SCR_DIV_CODE": "16633",
                 "FID_INPUT_ISCD": symbol,
+                "FID_INPUT_DATE_1": date_from,
+                "FID_INPUT_DATE_2": date_to,
             },
             db=db,
         )
@@ -248,7 +258,7 @@ class FinanceService:
                     date=date,
                     firm=row.get("mbcr_name", "").strip(),
                     opinion=row.get("invt_opnn", "").strip(),
-                    target_price=_safe_int(row.get("stck_prpr")) or None,
+                    target_price=_safe_int(row.get("hts_goal_prc")) or None,
                     change=row.get("invt_opnn_cls_code", "").strip() or None,
                 )
             )

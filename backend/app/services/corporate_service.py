@@ -1,6 +1,7 @@
 """Phase 7 — 배당 / 뉴스 / 종목정보 / KSD 기업정보 서비스."""
 
 import logging
+from datetime import datetime, timedelta
 
 from app.models.kis_account import KISAccount
 from app.schemas.analysis import (
@@ -45,30 +46,40 @@ class CorporateService:
         if cached:
             return [DividendItem(**item) for item in cached]
 
+        # 최근 5년 배당 조회
+        now = datetime.now()
+        t_dt = now.strftime("%Y%m%d")
+        f_dt = (now - timedelta(days=365 * 5)).strftime("%Y%m%d")
+
         data = await kis_client.request(
             account,
             "GET",
             "/uapi/domestic-stock/v1/ksdinfo/dividend",
             tr_id="HHKDB669102C0",
             params={
-                "COND_MRKT_DIV_CODE": "J",
-                "INPUT_ISCD": symbol,
+                "CTS": "",
+                "GB1": "0",
+                "F_DT": f_dt,
+                "T_DT": t_dt,
                 "SHT_CD": symbol,
+                "HIGH_GB": "",
             },
             db=db,
         )
 
         items: list[DividendItem] = []
-        for row in data.get("output", []):
-            year = row.get("record_date", "")[:4]
-            if not year:
+        # output1 (not output)
+        for row in data.get("output1", data.get("output", [])):
+            record_date = row.get("record_date", "").strip()
+            if not record_date:
                 continue
+            year = record_date[:4]
             items.append(
                 DividendItem(
                     year=year,
                     dps=_safe_int(row.get("per_sto_divi_amt")) or None,
                     div_rate=_safe_float(row.get("divi_rate")) or None,
-                    ex_date=row.get("divi_pay_dt", "").strip() or None,
+                    ex_date=row.get("record_date", "").strip() or None,
                     pay_date=row.get("divi_pay_dt", "").strip() or None,
                     record_date=row.get("record_date", "").strip() or None,
                 )
@@ -111,14 +122,14 @@ class CorporateService:
 
         items: list[DividendRankItem] = []
         for idx, row in enumerate(data.get("output", []), 1):
-            symbol = row.get("mksc_shrn_iscd", "").strip()
+            sym = row.get("mksc_shrn_iscd", "").strip()
             name = row.get("hts_kor_isnm", "").strip()
-            if not symbol or not name:
+            if not sym or not name:
                 continue
             items.append(
                 DividendRankItem(
                     rank=idx,
-                    symbol=symbol,
+                    symbol=sym,
                     name=name,
                     div_rate=_safe_float(row.get("divi_rate")),
                     current_price=_safe_int(row.get("stck_prpr")),
@@ -147,35 +158,40 @@ class CorporateService:
             "/uapi/domestic-stock/v1/quotations/news-title",
             tr_id="FHKST01011800",
             params={
-                "FID_COND_MRKT_DIV_CODE": "J",
+                "FID_COND_MRKT_CLS_CODE": "",
                 "FID_INPUT_ISCD": symbol,
                 "FID_INPUT_DATE_1": "",
-                "FID_INPUT_DATE_2": "",
                 "FID_INPUT_HOUR_1": "",
+                "FID_NEWS_OFER_ENTP_CODE": "",
+                "FID_TITL_CNTT": "",
+                "FID_RANK_SORT_CLS_CODE": "",
+                "FID_INPUT_SRNO": "",
             },
             db=db,
         )
 
         items: list[NewsItem] = []
-        for row in data.get("output", []):
-            title = row.get("data_dt", "").strip()  # 뉴스 제목
-            if not title:
-                # KIS field names vary — try common alternatives
-                title = row.get("news_titl", row.get("titl", "")).strip()
-            date = row.get("data_dt", row.get("cntt_date", "")).strip()
-            time = row.get("data_tm", row.get("cntt_time", "")).strip()
-            news_title = row.get("news_titl", row.get("titl", "")).strip()
-            if not news_title:
-                continue
-            items.append(
-                NewsItem(
-                    date=date,
-                    time=time,
-                    title=news_title,
-                    source=row.get("news_ofi_name", row.get("dprt_name", "")).strip() or None,
-                    article_id=row.get("news_id", row.get("cntt_sn", "")).strip() or None,
+        # output1 (not output)
+        output = data.get("output1", data.get("output", []))
+        if isinstance(output, list):
+            for row in output:
+                title = row.get("hts_pbnt_titl_cntt", "").strip()
+                if not title:
+                    # fallback field names
+                    title = row.get("news_titl", row.get("titl", "")).strip()
+                if not title:
+                    continue
+                date = row.get("data_dt", "").strip()
+                time = row.get("data_tm", "").strip()
+                items.append(
+                    NewsItem(
+                        date=date,
+                        time=time,
+                        title=title,
+                        source=row.get("dorg", row.get("news_ofi_name", "")).strip() or None,
+                        article_id=row.get("cntt_usiq_srno", row.get("news_id", "")).strip() or None,
+                    )
                 )
-            )
         await cache_set(cache_key, [i.model_dump() for i in items], 60)
         return items
 
@@ -199,18 +215,35 @@ class CorporateService:
             tr_id="CTPF1604R",
             params={
                 "PDNO": symbol,
-                "PRDT_TYPE_CD": "300",  # 주식
+                "PRDT_TYPE_CD": "300",
             },
             db=db,
         )
 
         output = data.get("output", {})
+        if isinstance(output, list) and len(output) > 0:
+            output = output[0]
+        elif isinstance(output, list):
+            output = {}
+
+        # 필드명은 KIS 응답에 따라 다양할 수 있음 — 여러 후보 시도
         info = StockInfoDetail(
             symbol=symbol,
-            name=output.get("prdt_abrv_name", "").strip(),
-            market=output.get("rprs_mrkt_kor_name", "").strip(),
+            name=(
+                output.get("prdt_abrv_name", "")
+                or output.get("prdt_name", "")
+                or output.get("prdt_eng_name", "")
+            ).strip(),
+            market=(
+                output.get("rprs_mrkt_kor_name", "")
+                or output.get("std_pdno", "")
+            ).strip(),
             sector=output.get("std_idst_clsf_cd_name", "").strip() or None,
-            listing_date=output.get("lstg_dt", "").strip() or None,
+            listing_date=(
+                output.get("lstg_dt", "")
+                or output.get("frst_erlm_dt", "")
+                or output.get("sale_strt_dt", "")
+            ).strip() or None,
             face_value=_safe_int(output.get("papr")) or None,
             shares_outstanding=_safe_int(output.get("lstg_stqt")) or None,
             capital=_safe_int(output.get("cpfn")) or None,

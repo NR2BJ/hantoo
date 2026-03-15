@@ -266,6 +266,7 @@ class RankingService:
         return items
 
     # ---- 종목별 투자자 매매동향 ----
+    # FHKST01010900: 날짜별 시계열 — 한 행에 개인/외인/기관 데이터가 모두 포함
     async def get_investor(
         self,
         account: KISAccount,
@@ -289,22 +290,43 @@ class RankingService:
             db=db,
         )
 
-        items: list[InvestorItem] = []
-        for row in data.get("output", []):
-            # 투자자 구분 코드 → 이름
-            investor_cd = row.get("invr_cd", "")
-            investor_name = _INVESTOR_NAMES.get(investor_cd, f"기타({investor_cd})")
-            items.append(
-                InvestorItem(
-                    investor=investor_name,
-                    buy_volume=_safe_int(row.get("prsn_ntby_qty", row.get("total_seln_qty", 0))),
-                    sell_volume=_safe_int(row.get("total_seln_qty", 0)),
-                    net_volume=_safe_int(row.get("prsn_ntby_qty", 0)),
-                    buy_amount=_safe_int(row.get("total_shnu_amt", 0)),
-                    sell_amount=_safe_int(row.get("total_seln_amt", 0)),
-                    net_amount=_safe_int(row.get("prsn_ntby_amt", 0)),
-                )
-            )
+        output = data.get("output", [])
+        if not output:
+            return []
+
+        # 가장 최근 날짜 데이터를 개인/외인/기관 3행으로 변환
+        row = output[0]
+
+        items: list[InvestorItem] = [
+            InvestorItem(
+                investor="개인",
+                buy_volume=_safe_int(row.get("prsn_shnu_vol", 0)),
+                sell_volume=_safe_int(row.get("prsn_seln_vol", 0)),
+                net_volume=_safe_int(row.get("prsn_ntby_qty", 0)),
+                buy_amount=_safe_int(row.get("prsn_shnu_tr_pbmn", 0)),
+                sell_amount=_safe_int(row.get("prsn_seln_tr_pbmn", 0)),
+                net_amount=_safe_int(row.get("prsn_ntby_tr_pbmn", 0)),
+            ),
+            InvestorItem(
+                investor="외국인",
+                buy_volume=_safe_int(row.get("frgn_shnu_vol", 0)),
+                sell_volume=_safe_int(row.get("frgn_seln_vol", 0)),
+                net_volume=_safe_int(row.get("frgn_ntby_qty", 0)),
+                buy_amount=_safe_int(row.get("frgn_shnu_tr_pbmn", 0)),
+                sell_amount=_safe_int(row.get("frgn_seln_tr_pbmn", 0)),
+                net_amount=_safe_int(row.get("frgn_ntby_tr_pbmn", 0)),
+            ),
+            InvestorItem(
+                investor="기관",
+                buy_volume=_safe_int(row.get("orgn_shnu_vol", 0)),
+                sell_volume=_safe_int(row.get("orgn_seln_vol", 0)),
+                net_volume=_safe_int(row.get("orgn_ntby_qty", 0)),
+                buy_amount=_safe_int(row.get("orgn_shnu_tr_pbmn", 0)),
+                sell_amount=_safe_int(row.get("orgn_seln_tr_pbmn", 0)),
+                net_amount=_safe_int(row.get("orgn_ntby_tr_pbmn", 0)),
+            ),
+        ]
+
         await cache_set(cache_key, [i.model_dump() for i in items], 10)
         return items
 
