@@ -136,6 +136,28 @@ export interface BuyableAmount {
   orderable_qty: number;
 }
 
+// ── Portfolio Types ──
+
+export interface AccountBalance {
+  total_value: number;
+  cash: number;
+  stock_value: number;
+  total_pnl: number;
+  total_pnl_rate: number;
+  holding_count: number;
+}
+
+export interface Holding {
+  symbol: string;
+  name: string;
+  quantity: number;
+  avg_price: number;
+  current_price: number;
+  value: number;
+  pnl: number;
+  pnl_rate: number;
+}
+
 // Color helpers for Korean market convention
 export function getPriceColor(changeSign: string): string {
   // 1=상한, 2=상승 → red, 4=하한, 5=하락 → blue, 3=보합 → gray
