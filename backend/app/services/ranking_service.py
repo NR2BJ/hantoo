@@ -31,14 +31,20 @@ def _safe_float(val, default=0.0) -> float:
 def _parse_rank_items(output: list[dict]) -> list[RankItem]:
     """Parse KIS ranking output into RankItem list."""
     items: list[RankItem] = []
-    for row in output:
-        symbol = row.get("mksc_shrn_iscd", "").strip()
+    if output:
+        logger.info("Ranking first row keys: %s", list(output[0].keys())[:15])
+    for idx, row in enumerate(output, 1):
+        # Different ranking APIs use different field names for symbol
+        symbol = (
+            row.get("mksc_shrn_iscd", "").strip()
+            or row.get("stck_shrn_iscd", "").strip()
+        )
         name = row.get("hts_kor_isnm", "").strip()
         if not symbol or not name:
             continue
         items.append(
             RankItem(
-                rank=_safe_int(row.get("data_rank", 0)),
+                rank=_safe_int(row.get("data_rank")) or idx,
                 symbol=symbol,
                 name=name,
                 current_price=_safe_int(row.get("stck_prpr")),

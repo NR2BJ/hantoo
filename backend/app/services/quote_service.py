@@ -14,6 +14,20 @@ from app.services.cache import cache_get, cache_set
 from app.services.kis_client import kis_client
 from app.services.stock_list import search_stocks as search_stocks_naver
 
+async def _resolve_stock_name(symbol: str) -> str:
+    """Resolve stock name via Naver search (with long cache)."""
+    cache_key = f"kis:name:{symbol}"
+    cached = await cache_get(cache_key)
+    if cached:
+        return cached
+
+    results = await search_stocks_naver(symbol)
+    for r in results:
+        if r.symbol == symbol:
+            await cache_set(cache_key, r.name, 86400)  # 24h cache
+            return r.name
+    return ""
+
 logger = logging.getLogger(__name__)
 
 # Fallback index names (KIS API sometimes omits them)
@@ -59,12 +73,15 @@ class QuoteService:
             db=db,
         )
         out = data.get("output", {})
-        logger.info("KIS quote raw for %s: name=%s, price=%s, vol=%s",
-                     symbol, out.get("hts_kor_isnm"), out.get("stck_prpr"), out.get("acml_vol"))
+        logger.info("KIS quote for %s: price=%s, vol=%s",
+                     symbol, out.get("stck_prpr"), out.get("acml_vol"))
+
+        # inquire-price API doesn't return stock name; resolve via Naver
+        name = await _resolve_stock_name(symbol)
 
         quote = StockQuote(
             symbol=symbol,
-            name=out.get("hts_kor_isnm", ""),
+            name=name,
             current_price=_safe_int(out.get("stck_prpr")),
             change=_safe_int(out.get("prdy_vrss")),
             change_rate=_safe_float(out.get("prdy_ctrt")),

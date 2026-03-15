@@ -106,10 +106,9 @@ def create_app() -> FastAPI:
                     "status": "ok",
                     "rt_cd": data.get("rt_cd"),
                     "symbol": symbol,
-                    "name": out.get("hts_kor_isnm"),
                     "price": out.get("stck_prpr"),
                     "volume": out.get("acml_vol"),
-                    "raw_keys": list(out.keys())[:20],
+                    "raw_keys": list(out.keys())[:30],
                 }
             except KISApiError as e:
                 return {"status": "kis_error", "rt_cd": e.rt_cd, "msg_cd": e.msg_cd, "msg": e.msg}
