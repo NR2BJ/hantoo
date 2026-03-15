@@ -12,7 +12,7 @@ from app.schemas.market import (
 )
 from app.services.cache import cache_get, cache_set
 from app.services.kis_client import kis_client
-from app.services.stock_list import search_local
+from app.services.stock_list import search_stocks as search_stocks_naver
 
 logger = logging.getLogger(__name__)
 
@@ -274,8 +274,8 @@ class QuoteService:
     async def search_stocks(
         self, query: str
     ) -> list[SearchResult]:
-        """Search stocks locally using KRX stock list (no KIS API needed)."""
-        return await search_local(query)
+        """Search stocks via Naver Finance autocomplete (no KIS API needed)."""
+        return await search_stocks_naver(query)
 
 
 quote_service = QuoteService()
