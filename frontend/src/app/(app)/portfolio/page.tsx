@@ -26,19 +26,19 @@ export default function PortfolioPage() {
   // Calculate weight percentages for holdings
   const totalStockValue = holdings?.reduce((sum, h) => sum + h.value, 0) ?? 0;
 
-  const isUnsupportedAccount =
+  const balanceErrorMsg =
     balanceError && typeof balanceError === "object" && "message" in balanceError
-      ? String((balanceError as { message?: string }).message).includes("금융상품")
-      : false;
+      ? String((balanceError as { message?: string }).message)
+      : null;
 
   return (
     <div className="space-y-6">
       <h2 className="text-2xl font-bold">포트폴리오</h2>
 
-      {/* Unsupported account warning */}
-      {isUnsupportedAccount && (
+      {/* Balance error warning */}
+      {balanceErrorMsg && (
         <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4 text-sm text-yellow-600">
-          금융상품 계좌는 잔고 조회를 지원하지 않습니다. 위탁계좌(상품코드 01)를 선택해주세요.
+          {balanceErrorMsg}
         </div>
       )}
 

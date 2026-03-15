@@ -39,19 +39,67 @@ def _tr_id(base: str, environment: str) -> str:
 
 class PortfolioService:
 
+    async def _get_holdings_account_overview(
+        self,
+        account: KISAccount,
+        db: AsyncSession,
+    ) -> list[Holding]:
+        """Get holdings for non-brokerage accounts via CTRP6548R output1."""
+        tr_id = _tr_id("CTRP6548R", account.environment)
+
+        try:
+            data = await kis_client.request(
+                account,
+                "GET",
+                "/uapi/domestic-stock/v1/trading/inquire-account-balance",
+                tr_id=tr_id,
+                params={
+                    "CANO": account.account_number,
+                    "ACNT_PRDT_CD": account.product_code,
+                    "INQR_DVSN_1": "",
+                    "BSPR_BF_DT_APLY_YN": "",
+                },
+                db=db,
+            )
+        except Exception as e:
+            logger.warning("CTRP6548R holdings query failed: %s", e)
+            return []
+
+        holdings = []
+        for item in data.get("output1", []):
+            qty = _safe_int(item.get("hldg_qty", item.get("cblc_qty13", 0)))
+            if qty <= 0:
+                continue
+
+            holdings.append(Holding(
+                symbol=item.get("pdno", ""),
+                name=item.get("prdt_name", ""),
+                quantity=qty,
+                avg_price=_safe_int(item.get("pchs_avg_pric")),
+                current_price=_safe_int(item.get("prpr", item.get("bstp_nmix_prpr", 0))),
+                value=_safe_int(item.get("evlu_amt")),
+                pnl=_safe_int(item.get("evlu_pfls_amt")),
+                pnl_rate=_safe_float(item.get("evlu_pfls_rt")),
+            ))
+
+        return holdings
+
     async def get_holdings(
         self,
         account: KISAccount,
         db: AsyncSession,
     ) -> list[Holding]:
         """Get list of domestic holdings with live prices from KIS."""
-        if account.product_code != "01":
-            return []
-
         cache_key = f"kis:holdings:{account.id}"
         cached = await cache_get(cache_key)
         if cached:
             return [Holding(**h) for h in cached]
+
+        # Non-brokerage accounts use CTRP6548R
+        if account.product_code != "01":
+            holdings = await self._get_holdings_account_overview(account, db)
+            await cache_set(cache_key, [h.model_dump() for h in holdings], 10)
+            return holdings
 
         tr_id = _tr_id("TTTC8434R", account.environment)
 
@@ -238,28 +286,12 @@ class PortfolioService:
         await cache_set(cache_key, result, 10)
         return foreign_balances, overseas_total_krw
 
-    async def get_balance(
+    async def _get_balance_brokerage(
         self,
         account: KISAccount,
         db: AsyncSession,
     ) -> AccountBalance:
-        """Get account balance summary from KIS.
-
-        Only supports brokerage accounts (product_code='01').
-        For non-brokerage accounts, raises an error.
-        """
-        if account.product_code != "01":
-            raise KISApiError(
-                rt_cd="9",
-                msg_cd="NOT_SUPPORTED",
-                msg=f"금융상품 계좌(상품코드: {account.product_code})는 잔고 조회를 지원하지 않습니다. 위탁계좌(01)만 지원됩니다.",
-            )
-
-        cache_key = f"kis:balance:{account.id}"
-        cached = await cache_get(cache_key)
-        if cached:
-            return AccountBalance(**cached)
-
+        """Get balance for brokerage accounts (product_code='01') via TTTC8434R."""
         tr_id = _tr_id("TTTC8434R", account.environment)
 
         data = await kis_client.request(
@@ -316,7 +348,7 @@ class PortfolioService:
         except Exception as e:
             logger.warning("Failed to get overseas balance: %s", e)
 
-        balance = AccountBalance(
+        return AccountBalance(
             total_value=total_value,
             cash=cash,
             stock_value=stock_value,
@@ -326,6 +358,120 @@ class PortfolioService:
             foreign_balances=foreign_balances,
             overseas_total_krw=overseas_total_krw,
         )
+
+    async def _get_balance_account_overview(
+        self,
+        account: KISAccount,
+        db: AsyncSession,
+    ) -> AccountBalance:
+        """Get balance for non-brokerage accounts via CTRP6548R (투자계좌 자산현황).
+
+        This is the universal account balance API that works with various
+        product codes (금융상품, 연금 등). Maps to HTS screen [0891].
+        """
+        tr_id = _tr_id("CTRP6548R", account.environment)
+
+        data = await kis_client.request(
+            account,
+            "GET",
+            "/uapi/domestic-stock/v1/trading/inquire-account-balance",
+            tr_id=tr_id,
+            params={
+                "CANO": account.account_number,
+                "ACNT_PRDT_CD": account.product_code,
+                "INQR_DVSN_1": "",
+                "BSPR_BF_DT_APLY_YN": "",
+            },
+            db=db,
+        )
+
+        # output1: per-holding items
+        holdings_data = data.get("output1", [])
+        holding_count = len(holdings_data)
+
+        # output2: summary (list with one item, or dict)
+        summary = data.get("output2", [{}])
+        if isinstance(summary, list) and summary:
+            out = summary[0]
+        else:
+            out = summary if isinstance(summary, dict) else {}
+
+        # Try various field names that CTRP6548R may return
+        # 총평가금액
+        total_value = (
+            _safe_int(out.get("tot_evlu_amt"))
+            or _safe_int(out.get("scts_evlu_amt"))  # 유가증권평가금액
+            or _safe_int(out.get("tot_asst_amt"))
+        )
+        # 예수금
+        cash = (
+            _safe_int(out.get("dnca_tot_amt"))
+            or _safe_int(out.get("prvs_rcdl_excc_amt"))  # 가수도정산예상금액
+            or _safe_int(out.get("nass_amt"))  # 순자산금액
+        )
+        # 주식/상품 평가금액
+        stock_value = (
+            _safe_int(out.get("evlu_amt_smtl_amt"))
+            or _safe_int(out.get("scts_evlu_amt"))
+        )
+        # 총손익
+        total_pnl = (
+            _safe_int(out.get("evlu_pfls_smtl_amt"))
+            or _safe_int(out.get("evlu_pfls_amt"))
+        )
+
+        if total_value == 0:
+            total_value = stock_value + cash
+
+        purchase_total = _safe_int(out.get("pchs_amt_smtl_amt"))
+        if purchase_total > 0:
+            total_pnl_rate = round((total_pnl / purchase_total) * 100, 2)
+        else:
+            total_pnl_rate = 0.0
+
+        return AccountBalance(
+            total_value=total_value,
+            cash=cash,
+            stock_value=stock_value,
+            total_pnl=total_pnl,
+            total_pnl_rate=total_pnl_rate,
+            holding_count=holding_count,
+        )
+
+    async def get_balance(
+        self,
+        account: KISAccount,
+        db: AsyncSession,
+    ) -> AccountBalance:
+        """Get account balance summary from KIS.
+
+        Uses TTTC8434R for brokerage accounts (01),
+        falls back to CTRP6548R for other account types (금융상품 등).
+        """
+        cache_key = f"kis:balance:{account.id}"
+        cached = await cache_get(cache_key)
+        if cached:
+            return AccountBalance(**cached)
+
+        if account.product_code == "01":
+            balance = await self._get_balance_brokerage(account, db)
+        else:
+            # Try CTRP6548R for non-brokerage accounts
+            try:
+                balance = await self._get_balance_account_overview(account, db)
+            except KISApiError as e:
+                logger.warning(
+                    "CTRP6548R failed for product_code=%s: %s",
+                    account.product_code, e.msg,
+                )
+                raise KISApiError(
+                    rt_cd="9",
+                    msg_cd="NOT_SUPPORTED",
+                    msg=(
+                        f"계좌(상품코드: {account.product_code}) 잔고 조회에 실패했습니다. "
+                        f"KIS 응답: {e.msg}"
+                    ),
+                )
 
         await cache_set(cache_key, balance.model_dump(), 10)
         return balance
