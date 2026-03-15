@@ -1,5 +1,7 @@
 """Local stock list fetched from KRX for fast keyword search."""
 
+import csv
+import io
 import logging
 
 import httpx
@@ -12,31 +14,47 @@ logger = logging.getLogger(__name__)
 CACHE_KEY = "kis:stocklist"
 CACHE_TTL = 86400  # 24 hours
 
-# KRX stock list sources
-KRX_KOSPI_URL = "http://data.krx.co.kr/comm/bldAttend/getJsonData.cmd"
+KRX_OTP_URL = "http://data.krx.co.kr/comm/fileDn/GenerateOTP/generate.cmd"
+KRX_DOWN_URL = "http://data.krx.co.kr/comm/fileDn/download_csv/download.cmd"
 KRX_HEADERS = {
-    "User-Agent": "Mozilla/5.0",
-    "Content-Type": "application/x-www-form-urlencoded",
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+    "Referer": "http://data.krx.co.kr/contents/MDC/MDI/mdiSub/mdiSub01/mdiSub01BySec.cmd",
 }
 
 
-async def _fetch_krx_stocks(mkt_id: str) -> list[dict]:
-    """Fetch stock list from KRX for a given market."""
+async def _fetch_krx_csv(mkt_id: str) -> list[dict]:
+    """Fetch stock list CSV from KRX using OTP method."""
     try:
-        async with httpx.AsyncClient(timeout=15.0) as client:
-            resp = await client.post(
-                KRX_KOSPI_URL,
+        async with httpx.AsyncClient(timeout=20.0, follow_redirects=True) as client:
+            # Step 1: Get OTP
+            otp_resp = await client.post(
+                KRX_OTP_URL,
                 headers=KRX_HEADERS,
                 data={
-                    "bld": "dbms/MDC/STAT/standard/MDCSTAT01901",
-                    "mktId": mkt_id,  # STK=KOSPI, KSQ=KOSDAQ
+                    "locale": "ko_KR",
+                    "mktId": mkt_id,
                     "share": "1",
                     "csvxls_isNo": "false",
+                    "name": "fileDown",
+                    "url": "dbms/MDC/STAT/standard/MDCSTAT01901",
                 },
             )
-            resp.raise_for_status()
-            data = resp.json()
-            return data.get("OutBlock_1", [])
+            otp_resp.raise_for_status()
+            otp = otp_resp.text.strip()
+
+            # Step 2: Download CSV
+            csv_resp = await client.post(
+                KRX_DOWN_URL,
+                headers=KRX_HEADERS,
+                data={"code": otp},
+            )
+            csv_resp.raise_for_status()
+
+            # Parse CSV
+            content = csv_resp.content.decode("euc-kr", errors="replace")
+            reader = csv.DictReader(io.StringIO(content))
+            rows = list(reader)
+            return rows
     except Exception as e:
         logger.error("Failed to fetch KRX stock list (mkt=%s): %s", mkt_id, e)
         return []
@@ -49,22 +67,20 @@ async def load_stock_list() -> list[dict]:
         return cached
 
     logger.info("Fetching stock list from KRX...")
-    kospi = await _fetch_krx_stocks("STK")
-    kosdaq = await _fetch_krx_stocks("KSQ")
+    kospi = await _fetch_krx_csv("STK")
+    kosdaq = await _fetch_krx_csv("KSQ")
 
     stocks = []
     for item in kospi:
-        stocks.append({
-            "symbol": item.get("ISU_SRT_CD", ""),
-            "name": item.get("ISU_ABBRV", ""),
-            "market": "KOSPI",
-        })
+        code = item.get("종목코드", "").strip()
+        name = item.get("종목명", "").strip()
+        if code and name:
+            stocks.append({"symbol": code, "name": name, "market": "KOSPI"})
     for item in kosdaq:
-        stocks.append({
-            "symbol": item.get("ISU_SRT_CD", ""),
-            "name": item.get("ISU_ABBRV", ""),
-            "market": "KOSDAQ",
-        })
+        code = item.get("종목코드", "").strip()
+        name = item.get("종목명", "").strip()
+        if code and name:
+            stocks.append({"symbol": code, "name": name, "market": "KOSDAQ"})
 
     if stocks:
         await cache_set(CACHE_KEY, stocks, CACHE_TTL)

@@ -1,4 +1,5 @@
 import asyncio
+import logging
 
 from fastapi import APIRouter, Query
 
@@ -12,6 +13,8 @@ from app.schemas.market import (
     TradeRecord,
 )
 from app.services.quote_service import quote_service
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -85,7 +88,16 @@ async def get_indices(
         quote_service.get_index_price(account, code, db)
         for code, _ in MAJOR_INDICES
     ]
-    return await asyncio.gather(*tasks)
+    results = await asyncio.gather(*tasks, return_exceptions=True)
+
+    # Filter out failed index queries (e.g. paper trading server doesn't support indices)
+    indices = []
+    for (code, name), result in zip(MAJOR_INDICES, results):
+        if isinstance(result, Exception):
+            logger.warning("Failed to fetch index %s (%s): %s", code, name, result)
+            continue
+        indices.append(result)
+    return indices
 
 
 @router.get("/search", response_model=list[SearchResult])
