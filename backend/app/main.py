@@ -77,4 +77,14 @@ def create_app() -> FastAPI:
     async def health():
         return {"status": "ok", "setup_completed": app_settings.setup_completed}
 
+    @app.post("/api/cache/flush")
+    async def flush_cache():
+        """Flush all Redis cache (kis:* keys)."""
+        from app.services.redis_client import get_redis
+        r = get_redis()
+        keys = [k async for k in r.scan_iter("kis:*")]
+        if keys:
+            await r.delete(*keys)
+        return {"flushed": len(keys)}
+
     return app
