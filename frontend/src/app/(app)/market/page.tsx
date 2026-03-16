@@ -221,7 +221,7 @@ function HighLowSection({ market }: { market: string }) {
         <button onClick={() => setSort("1")} className={`px-2 py-0.5 text-xs rounded ${sort === "1" ? "bg-red-500 text-white" : "bg-[var(--secondary)]"}`}>신고가</button>
         <button onClick={() => setSort("2")} className={`px-2 py-0.5 text-xs rounded ${sort === "2" ? "bg-blue-500 text-white" : "bg-[var(--secondary)]"}`}>신저가</button>
       </div>
-      <RankTable data={data} loading={isLoading} error={error} label="52주 신고/저가" />
+      <RankTable data={data} loading={isLoading} error={error} label="52주 신고/저가" rateLabel="근접률" />
     </div>
   );
 }
@@ -279,11 +279,13 @@ function RankTable({
   loading,
   error,
   label,
+  rateLabel = "등락률",
 }: {
   data: RankItem[] | undefined;
   loading: boolean;
   error: Error | null;
   label: string;
+  rateLabel?: string;
 }) {
   const router = useRouter();
 
@@ -298,7 +300,7 @@ function RankTable({
           <th className="text-left py-1 w-8">#</th>
           <th className="text-left py-1">종목</th>
           <th className="text-right py-1">현재가</th>
-          <th className="text-right py-1">등락률</th>
+          <th className="text-right py-1">{rateLabel}</th>
           <th className="text-right py-1">거래량</th>
         </tr>
       </thead>

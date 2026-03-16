@@ -28,8 +28,17 @@ def _safe_float(val, default=0.0) -> float:
         return default
 
 
-def _parse_rank_items(output: list[dict]) -> list[RankItem]:
-    """Parse KIS ranking output into RankItem list."""
+def _parse_rank_items(
+    output: list[dict],
+    *,
+    change_rate_key: str = "prdy_ctrt",
+) -> list[RankItem]:
+    """Parse KIS ranking output into RankItem list.
+
+    Args:
+        change_rate_key: which field to map to change_rate
+            (e.g. "prdy_ctrt" for most, "hprc_near_rate" for near-highlow)
+    """
     items: list[RankItem] = []
     if output:
         logger.info("Ranking first row keys: %s", list(output[0].keys())[:15])
@@ -49,7 +58,7 @@ def _parse_rank_items(output: list[dict]) -> list[RankItem]:
                 name=name,
                 current_price=_safe_int(row.get("stck_prpr")),
                 change=_safe_int(row.get("prdy_vrss")),
-                change_rate=_safe_float(row.get("prdy_ctrt")),
+                change_rate=_safe_float(row.get(change_rate_key)),
                 change_sign=row.get("prdy_vrss_sign", "3"),
                 volume=_safe_int(row.get("acml_vol")),
                 trade_amount=_safe_int(row.get("acml_tr_pbmn")),
@@ -130,20 +139,21 @@ class RankingService:
             "/uapi/domestic-stock/v1/ranking/fluctuation",
             tr_id="FHPST01700000",
             params={
-                "fid_cond_mrkt_div_code": market,
-                "fid_cond_scr_div_code": "20170",
-                "fid_input_iscd": "0000",
-                "fid_rank_sort_cls_code": sort,
-                "fid_input_cnt_1": "0",
-                "fid_prc_cls_code": "0",
-                "fid_input_price_1": "0",
-                "fid_input_price_2": "0",
-                "fid_vol_cnt": "0",
-                "fid_trgt_cls_code": "111111111",
-                "fid_trgt_exls_cls_code": "0000000000",
-                "fid_div_cls_code": "0",
-                "fid_rsfl_rate1": "",
-                "fid_rsfl_rate2": "",
+                "FID_COND_MRKT_DIV_CODE": market,
+                "FID_COND_SCR_DIV_CODE": "20170",
+                "FID_INPUT_ISCD": "0000",
+                # Frontend: 1=상승, 2=하락 → KIS API: 0=상승률순, 1=하락률순
+                "FID_RANK_SORT_CLS_CODE": "0" if sort == "1" else "1",
+                "FID_INPUT_CNT_1": "0",
+                "FID_PRC_CLS_CODE": "0",
+                "FID_INPUT_PRICE_1": "0",
+                "FID_INPUT_PRICE_2": "0",
+                "FID_VOL_CNT": "0",
+                "FID_TRGT_CLS_CODE": "111111111",
+                "FID_TRGT_EXLS_CLS_CODE": "0000000000",
+                "FID_DIV_CLS_CODE": "0",
+                "FID_RSFL_RATE1": "",
+                "FID_RSFL_RATE2": "",
             },
             db=db,
         )
@@ -258,22 +268,24 @@ class RankingService:
             "/uapi/domestic-stock/v1/ranking/near-new-highlow",
             tr_id="FHPST01870000",
             params={
-                "fid_cond_mrkt_div_code": market,
-                "fid_cond_scr_div_code": "20187",
-                "fid_input_iscd": "0000",
-                "fid_prc_cls_code": prc_cls_code,
-                "fid_div_cls_code": "0",
-                "fid_trgt_cls_code": "0",
-                "fid_trgt_exls_cls_code": "0",
-                "fid_input_cnt_1": "0",
-                "fid_input_cnt_2": "100",
-                "fid_aply_rang_vol": "0",
-                "fid_aply_rang_prc_1": "0",
-                "fid_aply_rang_prc_2": "0",
+                "FID_COND_MRKT_DIV_CODE": market,
+                "FID_COND_SCR_DIV_CODE": "20187",
+                "FID_INPUT_ISCD": "0000",
+                "FID_PRC_CLS_CODE": prc_cls_code,
+                "FID_DIV_CLS_CODE": "0",
+                "FID_TRGT_CLS_CODE": "0",
+                "FID_TRGT_EXLS_CLS_CODE": "0",
+                "FID_INPUT_CNT_1": "0",
+                "FID_INPUT_CNT_2": "100",
+                "FID_APLY_RANG_VOL": "0",
+                "FID_APLY_RANG_PRC_1": "0",
+                "FID_APLY_RANG_PRC_2": "0",
             },
             db=db,
         )
-        items = _parse_rank_items(data.get("output", []))
+        # near-highlow uses hprc_near_rate / lwpr_near_rate instead of prdy_ctrt
+        near_rate_key = "hprc_near_rate" if sort == "1" else "lwpr_near_rate"
+        items = _parse_rank_items(data.get("output", []), change_rate_key=near_rate_key)
         await cache_set(cache_key, [i.model_dump() for i in items], 10)
         return items
 
@@ -310,6 +322,14 @@ class RankingService:
         # 가장 최근 날짜 데이터를 개인/외인/기관 3행으로 변환
         row = output[0]
         logger.info("Investor data keys for %s: %s", symbol, list(row.keys())[:20])
+        logger.info(
+            "Investor data values for %s (date=%s): prsn_shnu=%s/%s, frgn_shnu=%s/%s, orgn_shnu=%s/%s",
+            symbol,
+            row.get("stck_bsop_date", "?"),
+            row.get("prsn_shnu_vol"), row.get("prsn_seln_vol"),
+            row.get("frgn_shnu_vol"), row.get("frgn_seln_vol"),
+            row.get("orgn_shnu_vol"), row.get("orgn_seln_vol"),
+        )
 
         items: list[InvestorItem] = [
             InvestorItem(
@@ -369,14 +389,21 @@ class RankingService:
             params={
                 "FID_COND_MRKT_DIV_CODE": "V",
                 "FID_COND_SCR_DIV_CODE": "16449",
-                "FID_INPUT_ISCD": "0000" if market == "J" else "1001",
+                "FID_INPUT_ISCD": "0000",  # 0000=전체 (confirmed working via logs)
                 "FID_DIV_CLS_CODE": "0",
                 "FID_RANK_SORT_CLS_CODE": "0",  # 0=순매수상위, 1=순매도상위
                 "FID_ETC_CLS_CODE": "0",  # 0=전체, 1=외국인, 2=기관계
             },
             db=db,
         )
-        items = _parse_rank_items(data.get("output", []))
+        output = data.get("output", [])
+        logger.info(
+            "[foreign] response keys=%s, output count=%d, first_row_keys=%s",
+            list(data.keys()),
+            len(output),
+            list(output[0].keys())[:15] if output else "EMPTY",
+        )
+        items = _parse_rank_items(output)
         await cache_set(cache_key, [i.model_dump() for i in items], 10)
         return items
 

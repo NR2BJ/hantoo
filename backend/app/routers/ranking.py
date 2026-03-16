@@ -1,6 +1,7 @@
 """Ranking endpoints — volume rank, fluctuation, market cap, interest, etc."""
 
 import logging
+import traceback
 
 from fastapi import APIRouter, HTTPException, Query
 
@@ -140,3 +141,43 @@ async def get_foreign_institution(
     except Exception as e:
         logger.warning("Failed to get foreign institution data: %s", e)
         return []
+
+
+@router.get("/diagnostics")
+async def diagnostics(
+    user: CurrentUser,
+    account: ActiveAccount,
+    db: DB,
+):
+    """모든 랭킹 API를 한번에 호출하여 필드 매핑·건수·샘플 데이터를 반환. 디버깅 전용."""
+    results: dict = {}
+    test_cases = [
+        ("volume", lambda: ranking_service.get_volume_rank(account, db, market="J")),
+        ("fluctuation_up", lambda: ranking_service.get_fluctuation(account, db, market="J", sort="1")),
+        ("fluctuation_down", lambda: ranking_service.get_fluctuation(account, db, market="J", sort="2")),
+        ("market_cap", lambda: ranking_service.get_market_cap(account, db, market="J")),
+        ("interest", lambda: ranking_service.get_top_interest(account, db, market="J")),
+        ("highlow_high", lambda: ranking_service.get_near_highlow(account, db, market="J", sort="1")),
+        ("highlow_low", lambda: ranking_service.get_near_highlow(account, db, market="J", sort="2")),
+        ("foreign", lambda: ranking_service.get_foreign_institution(account, db, market="J")),
+        ("investor_005930", lambda: ranking_service.get_investor(account, "005930", db)),
+    ]
+    for name, fn in test_cases:
+        try:
+            data = await fn()
+            sample = None
+            if data:
+                first = data[0]
+                sample = first.model_dump() if hasattr(first, "model_dump") else first
+            results[name] = {
+                "ok": True,
+                "count": len(data),
+                "sample": sample,
+            }
+        except Exception as e:
+            results[name] = {
+                "ok": False,
+                "error": str(e),
+                "traceback": traceback.format_exc()[-500:],
+            }
+    return results

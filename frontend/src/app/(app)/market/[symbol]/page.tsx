@@ -38,8 +38,13 @@ export default function StockDetailPage({
   const { symbol } = use(params);
   const [activeTab, setActiveTab] = useState<Tab>("chart");
   const [refreshing, setRefreshing] = useState(false);
-  const { data: quote } = useQuote(symbol);
+  const { data: quote, error: quoteError, isLoading: quoteLoading } = useQuote(symbol);
   const queryClient = useQueryClient();
+
+  // Debug: log quote data
+  if (typeof window !== "undefined") {
+    console.log(`[StockDetail] symbol=${symbol} quote=`, quote, `loading=${quoteLoading} error=`, quoteError);
+  }
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -127,8 +132,13 @@ export default function StockDetailPage({
 /* ─── Chart / Orderbook / Trades (original content) ─── */
 
 function ChartTab({ symbol }: { symbol: string }) {
-  const { data: orderbook } = useOrderbook(symbol);
-  const { data: trades } = useTrades(symbol);
+  const { data: orderbook, error: obError } = useOrderbook(symbol);
+  const { data: trades, error: trError } = useTrades(symbol);
+
+  // Debug
+  if (typeof window !== "undefined") {
+    console.log(`[ChartTab] orderbook=`, orderbook, `trades=${trades?.length ?? 0} items`, `errors: ob=${obError?.message} tr=${trError?.message}`);
+  }
 
   return (
     <div className="space-y-4">
@@ -204,6 +214,12 @@ function FinanceTab({ symbol }: { symbol: string }) {
   const { data: balance, isLoading: balLoading, error: balError } = useBalanceSheet(symbol, period);
   const { data: ratio, isLoading: ratLoading, error: ratError } = useFinancialRatio(symbol, period);
   const { data: estimate, isLoading: estLoading, error: estError } = useEstimate(symbol);
+
+  // Debug: log finance data
+  if (typeof window !== "undefined") {
+    console.log(`[FinanceTab] income=`, income, `balance=`, balance, `ratio=`, ratio, `estimate=`, estimate);
+    console.log(`[FinanceTab] errors: inc=${incError?.message} bal=${balError?.message} rat=${ratError?.message} est=${estError?.message}`);
+  }
 
   return (
     <div className="space-y-4">
@@ -350,6 +366,11 @@ function FinanceTab({ symbol }: { symbol: string }) {
 function DividendTab({ symbol }: { symbol: string }) {
   const { data: dividend, isLoading, error } = useDividend(symbol);
 
+  // Debug
+  if (typeof window !== "undefined") {
+    console.log(`[DividendTab] data=`, dividend, `error=`, error?.message);
+  }
+
   return (
     <DataSection title="배당 이력" loading={isLoading} error={error}>
       {dividend && dividend.length > 0 ? (
@@ -364,8 +385,8 @@ function DividendTab({ symbol }: { symbol: string }) {
             </tr>
           </thead>
           <tbody>
-            {dividend.map((row) => (
-              <tr key={row.year} className="border-b border-[var(--border)]">
+            {dividend.map((row, i) => (
+              <tr key={`${row.year}-${i}`} className="border-b border-[var(--border)]">
                 <td className="py-1">{row.year}</td>
                 <td className="text-right">{row.dps?.toLocaleString() ?? "-"}원</td>
                 <td className="text-right">{row.div_rate?.toFixed(2) ?? "-"}%</td>
@@ -386,6 +407,11 @@ function DividendTab({ symbol }: { symbol: string }) {
 
 function NewsTab({ symbol }: { symbol: string }) {
   const { data: news, isLoading, error } = useNews(symbol);
+
+  // Debug
+  if (typeof window !== "undefined") {
+    console.log(`[NewsTab] data=`, news, `error=`, error?.message);
+  }
 
   return (
     <DataSection title="관련 뉴스" loading={isLoading} error={error}>
@@ -412,6 +438,11 @@ function NewsTab({ symbol }: { symbol: string }) {
 
 function OpinionTab({ symbol }: { symbol: string }) {
   const { data: opinions, isLoading, error } = useInvestOpinion(symbol);
+
+  // Debug
+  if (typeof window !== "undefined") {
+    console.log(`[OpinionTab] data=`, opinions, `error=`, error?.message);
+  }
 
   return (
     <DataSection title="투자의견" loading={isLoading} error={error}>
@@ -449,6 +480,11 @@ function OpinionTab({ symbol }: { symbol: string }) {
 
 function InvestorTab({ symbol }: { symbol: string }) {
   const { data: investors, isLoading, error } = useInvestor(symbol);
+
+  // Debug
+  if (typeof window !== "undefined") {
+    console.log(`[InvestorTab] data=`, investors, `error=`, error?.message);
+  }
 
   return (
     <DataSection title="투자자별 매매동향" loading={isLoading} error={error}>
@@ -490,6 +526,11 @@ function InvestorTab({ symbol }: { symbol: string }) {
 
 function InfoTab({ symbol }: { symbol: string }) {
   const { data: info, isLoading, error } = useStockInfo(symbol);
+
+  // Debug
+  if (typeof window !== "undefined") {
+    console.log(`[InfoTab] data=`, info, `error=`, error?.message);
+  }
 
   return (
     <DataSection title="종목 기본정보" loading={isLoading} error={error}>
